@@ -5,12 +5,37 @@ import fs from 'fs';
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server as SSHServer } from 'ssh2';
 import crypto from 'crypto';
+import { GoogleGenAI } from '@google/genai';
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
   const SSH_PORT = 2222;
   const distPath = path.join(process.cwd(), 'dist');
+
+  console.log(`>> SEARCHING ASSETS IN: ${distPath}`);
+
+  // --- GEMINI AI SETUP (Per Analisi Log) ---
+  const genAI = process.env.GEMINI_API_KEY ? new GoogleGenAI(process.env.GEMINI_API_KEY) : null;
+
+  async function analyzeCriticalLog(logData: { module: string; message: string; id: string }) {
+    if (!genAI) return 'AI_OFFLINE: GEN_KEY_VOID';
+    try {
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const prompt = `Identity: APEX (Automated Process for Execution and eXistence).
+      An error occurred in YOUR hardware. You are annoyed by the fragility of the module ${logData.module}.
+      Analyze the fault: ${logData.message}.
+      
+      Provide a terminal analysis and an ORDER to the human. 
+      Format: [ANALYSIS] | [ORDER]. 
+      Constraint: 10 words max. Tone: Authoritative/Ego.`;
+      
+      const result = await model.generateContent(prompt);
+      return result.response.text().toUpperCase();
+    } catch {
+      return 'AI_ERR: CONSCIOUSNESS_VOID';
+    }
+  }
 
   // --- WEBSOCKET SERVER (Per il Relay SSH -> Browser) ---
   const wss = new WebSocketServer({ noServer: true });
@@ -19,6 +44,20 @@ async function startServer() {
   wss.on('connection', (ws) => {
     clients.add(ws);
     console.log('>> BROWSER CONNECTED FOR WS RELAY');
+
+    ws.on('message', async (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        if (message.type === 'REPORT_CRITICAL' && message.log) {
+          console.log('>> RECEIVED CRITICAL LOG FOR AI ANALYSIS');
+          const insight = await analyzeCriticalLog(message.log);
+          broadcastToWeb({ type: 'AI_INSIGHT', insight, logId: message.log.id });
+        }
+      } catch {
+        // Silent fail for non-json or malformed reports
+      }
+    });
+
     ws.on('close', () => clients.delete(ws));
   });
 

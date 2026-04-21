@@ -12,7 +12,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "start": "tsx server.ts"
+    "start": "tsx server.ts",
+    "build:bin": "npm run build && esbuild server.ts --bundle --platform=node --target=node20 --outfile=dist/server.bundle.js --external:ssh2 && pkg dist/server.bundle.js --targets node18-linux-arm64 --output apex-bin"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
@@ -23,9 +24,11 @@
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^5.0.4",
     "dotenv": "^17.2.3",
+    "esbuild": "^0.28.0",
     "express": "^4.21.2",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
+    "pkg": "^5.8.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "ssh2": "^1.17.0",

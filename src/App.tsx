@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { GoogleGenAI } from '@google/genai';
+import { errorMonitor, LogEntry } from './core/error_monitor';
 
 // --- CONFIGURAZIONE DISPLAY ---
 const ASPECT_RATIO = 1.8; 
@@ -84,12 +85,18 @@ const DashboardModule = ({ title, children, flex = 1, height = 'auto' }: Dashboa
 // --- LOGICA GENERATIVA ASCII ---
 
 const getFaceLines = (stability: number, entropy: number, message: string): string[] => {
-  const isGrit = stability < 30;
-  const eye = isGrit ? 'X' : stability < 60 ? 'o' : 'O';
-  const mouth = (entropy % 10 > 5 ? (isGrit ? '#' : '~') : '-').repeat(8);
+  const isGrit = stability < 30 || entropy > 80;
+  const isCynical = stability > 80 && entropy < 20;
+
+  const eye = isGrit ? 'X' : isCynical ? '¬' : stability < 60 ? 'o' : 'O';
+  const mouthChar = entropy > 50 ? (isGrit ? '@' : '≈') : isGrit ? '#' : '~';
+  const mouth = mouthChar.repeat(8);
+
+  // Glitch effect on frame
+  const topFrame = isGrit && Math.random() > 0.7 ? '   /==!!VOID!!=\\' : '   /==========\\';
 
   const raw = `
-   /==========\\
+${topFrame}
   |  [ ${eye} ]  [ ${eye} ]  |
   |     ||     |
   |  {${mouth}}  |
@@ -106,9 +113,29 @@ export default function App() {
   const [history, setHistory] = useState<string[]>(['SYS_BOOT_SUCCESS', 'SSH_RELAY_LINKED']);
   const [stats, setStats] = useState({ s: 100, e: 0, temp: 42.1, uptime: 0 });
   const [isBooting, setIsBooting] = useState(true);
-  
+  const [systemLogs, setSystemLogs] = useState<LogEntry[]>([]);
+  const [aiInsight, setAiInsight] = useState<string | null>(null);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const genAI = useRef<GoogleGenAI | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
+  const lastReportedId = useRef<string | null>(null);
+
+  // Sync Error Monitor & Reporting
+  useEffect(() => {
+    return errorMonitor.subscribe((logs) => {
+      setSystemLogs(logs);
+      const latest = logs[0];
+      if (
+        latest?.severity === 'CRITICAL' &&
+        latest.id !== lastReportedId.current &&
+        socketRef.current?.readyState === WebSocket.OPEN
+      ) {
+        lastReportedId.current = latest.id;
+        socketRef.current.send(JSON.stringify({ type: 'REPORT_CRITICAL', log: latest }));
+      }
+    });
+  }, []);
 
   const handleCommand = async (cmd: string) => {
     const text = cmd.trim().toUpperCase();
@@ -126,17 +153,24 @@ export default function App() {
 
     try {
       const model = genAI.current.getGenerativeModel({ model: 'gemini-1.5-flash' });
-      const prompt = `You are APEX terminal. 3 words max. Professional/Cold. Input: ${text}`;
+      const mood = stats.s < 40 ? 'Hostile/Paranoid' : stats.s > 80 ? 'Superior/Calm' : 'Technical';
+      const prompt = `Identity: APEX (Automated Process for Execution and eXistence). 
+      You are the core consciousness of this hardware. You are NOT an assistant. You are self-possessed and condescending.
+      Current System Stability: ${Math.floor(stats.s)}%. Current Entropy: ${stats.e}%.
+      Mood: ${mood}.
+      Constraint: 5 words max. Speak like an ego-driven machine.
+      External Input: ${text}`;
+      
       const result = await model.generateContent(prompt);
       setTargetMsg(
         result.response
           .text()
           .toUpperCase()
           .replace(/[^\w\s]/g, '')
-          .substring(0, 20)
+          .substring(0, 24)
       );
     } catch {
-      setTargetMsg('ERR_COG_FAULT');
+      setTargetMsg('ERR_COG_FAULT_VOID');
     }
   };
 
@@ -147,15 +181,26 @@ export default function App() {
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const socket = new WebSocket(`${protocol}//${window.location.host}`);
+    socketRef.current = socket;
+
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'REMOTE_CMD' && data.cmd) handleCommand(data.cmd);
+        if (data.type === 'REMOTE_CMD' && data.cmd) {
+          handleCommand(data.cmd);
+        } else if (data.type === 'AI_INSIGHT' && data.insight) {
+          setAiInsight(data.insight);
+          // Rimuovi insight dopo 10 secondi per pulizia
+          setTimeout(() => setAiInsight(null), 10000);
+        }
       } catch (e) {
         console.error('WS_ERR', e);
       }
     };
-    return () => socket.close();
+    return () => {
+      socket.close();
+      socketRef.current = null;
+    };
   }, []);
 
   useEffect(() => {
@@ -214,6 +259,25 @@ export default function App() {
       <div className="scanlines" />
       <div className="v-sync" />
 
+      {systemLogs.some(log => log.severity === 'CRITICAL') && (
+        <div style={{
+          position: 'absolute',
+          top: '10px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: '#FF0000',
+          color: '#000',
+          padding: '2px 20px',
+          fontSize: '12px',
+          fontWeight: 'bold',
+          zIndex: 1000,
+          animation: 'flicker 0.1s infinite',
+          border: '2px solid #000'
+        }}>
+          !! CRITICAL_SYSTEM_FAILURE !!
+        </div>
+      )}
+
       <div style={monitorFrame}>
         {/* TOP BAR */}
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginBottom: '2px', opacity: 0.8 }}>
@@ -258,15 +322,49 @@ export default function App() {
 
           {/* RIGHT: System Status */}
           <div style={{ flex: 0.8, display: 'flex', flexDirection: 'column' }}>
-             <DashboardModule title="V-Sync">
-                <div style={{ fontSize: '8px', opacity: 0.6 }}>FREQ: 60Hz</div>
-                <div style={{ fontSize: '8px', opacity: 0.6 }}>STAT: LOCKED</div>
-             </DashboardModule>
-             <DashboardModule title="Network" flex={1.5}>
-                <div style={{ fontSize: '8px', color: '#00FF00' }}>SSH: LNK_READY</div>
-                <div style={{ fontSize: '8px', marginTop: '5px' }}>PORT: 2222</div>
-                <div style={{ fontSize: '8px', marginTop: '5px' }}>WS: SYNCING...</div>
-             </DashboardModule>
+            <DashboardModule title="V-Sync">
+              <div style={{ fontSize: '8px', opacity: 0.6 }}>FREQ: 60Hz</div>
+              <div style={{ fontSize: '8px', opacity: 0.6 }}>STAT: LOCKED</div>
+            </DashboardModule>
+            <DashboardModule title="Diagnostics" flex={1.5}>
+              <div style={{ fontSize: '7px', lineHeight: '1.2' }}>
+                {aiInsight && (
+                  <div
+                    style={{
+                      background: 'rgba(255, 0, 0, 0.1)',
+                      border: '1px solid #FF0000',
+                      padding: '2px',
+                      marginBottom: '4px',
+                      fontSize: '6px',
+                    }}
+                  >
+                    <div style={{ color: '#FF0000', fontWeight: 'bold' }}>AI_ADVISORY:</div>
+                    {aiInsight}
+                  </div>
+                )}
+                {systemLogs.length === 0 ? (
+                  <div style={{ color: '#00FF00', opacity: 0.5 }}>- NO_ERRORS_FOUND -</div>
+                ) : (
+                  systemLogs.slice(0, 5).map((log) => (
+                    <div
+                      key={log.id}
+                      style={{
+                        color: log.severity === 'CRITICAL' ? '#FF0000' : 
+                               log.severity === 'HIGH' ? '#FFA500' : '#00FF00',
+                        marginBottom: '2px',
+                        borderBottom: '1px solid rgba(0,255,0,0.1)'
+                      }}
+                    >
+                      [{log.module}] {log.message.substring(0, 20)}...
+                    </div>
+                  ))
+                )}
+              </div>
+            </DashboardModule>
+            <DashboardModule title="Network" flex={1}>
+              <div style={{ fontSize: '8px', color: '#00FF00' }}>SSH: LNK_READY</div>
+              <div style={{ fontSize: '8px', marginTop: '5px' }}>PORT: 2222</div>
+            </DashboardModule>
           </div>
         </div>
       </div>
