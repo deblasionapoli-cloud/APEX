@@ -20,20 +20,29 @@ export class InputHandler {
     let event: Event;
 
     // Check if it's a command
-    const commands = ['ping', 'calm', 'attack', 'glitch', 'speak', 'status', 'stream', 'ai_response'];
+    const commands = [
+      'ping',
+      'calm',
+      'attack',
+      'glitch',
+      'speak',
+      'status',
+      'stream',
+      'ai_response',
+    ];
     const firstWord = trimmed.split(' ')[0].toLowerCase();
 
     if (commands.includes(firstWord)) {
       event = {
         type: 'command',
         payload: trimmed,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
     } else {
       event = {
         type: 'intent',
         payload: trimmed,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
     }
 

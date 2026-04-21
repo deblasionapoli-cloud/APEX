@@ -21,7 +21,7 @@ export interface Event {
 export interface State {
   emotion_state: EmotionState;
   intensity: number; // 0-100
-  entropy: number;   // 0-100
+  entropy: number; // 0-100
   stability: number; // 0-100
   animation_phase: number;
   stream_mode: boolean;
@@ -29,12 +29,12 @@ export interface State {
   particles: Particle[];
   smoke: Particle[];
   intrusion_alert: boolean;
-  
+
   // Speech Core
-  last_speech: string;     // Target full string
-  display_speech: string;  // Currently rendered string (typewriter)
+  last_speech: string; // Target full string
+  display_speech: string; // Currently rendered string (typewriter)
   speech_char_idx: number; // Character pointer
-  speech_speed: number;    // Animation interval (ticks per char)
+  speech_speed: number; // Animation interval (ticks per char)
   speech_sentiment: 'positive' | 'neutral' | 'negative' | 'chaotic';
 }
 
