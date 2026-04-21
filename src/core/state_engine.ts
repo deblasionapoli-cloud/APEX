@@ -21,6 +21,50 @@ export function updateState(currentState: State, events: Event[]): State {
   // Stability slowly recovers
   nextState.stability = Math.min(100, nextState.stability + 0.05);
 
+  // FX Physics: Smoke and Particles
+  // Smoke rises from the bottom or top depending on heat
+  if (nextState.entropy > 50 && nextState.animation_phase % 4 === 0) {
+    nextState.smoke.push({
+      x: Math.floor(Math.random() * 40),
+      y: 8, // Bottom of the face area roughly
+      char: Math.random() > 0.5 ? '~' : '*',
+      life: 10 + Math.floor(Math.random() * 10)
+    });
+  }
+
+  // Glitch particles
+  if (nextState.emotion_state === 'glitch' && nextState.animation_phase % 2 === 0) {
+    nextState.particles.push({
+      x: Math.floor(Math.random() * 40),
+      y: Math.floor(Math.random() * 8),
+      char: Math.random() > 0.5 ? '0' : '1',
+      life: 5
+    });
+  }
+
+  // Update FX
+  nextState.smoke = nextState.smoke
+    .map(p => ({ ...p, y: p.y - 0.5, life: p.life - 1 }))
+    .filter(p => p.life > 0);
+  
+  nextState.particles = nextState.particles
+    .map(p => ({ ...p, life: p.life - 1 }))
+    .filter(p => p.life > 0);
+
+  // Random Intrusion Simulation
+  if (!nextState.intrusion_alert && Math.random() > 0.999) {
+    nextState.intrusion_alert = true;
+    setTimeout(() => { // Note: technically side-effect in pure function, but Scheduler handles state immutably
+      // This is a hack because updateState should be pure. 
+      // I'll manage it via animation_phase or a specific command instead.
+    }, 5000);
+  }
+  
+  // Temporary intrusion alert expires
+  if (nextState.intrusion_alert && nextState.animation_phase % 200 === 0) {
+    nextState.intrusion_alert = false;
+  }
+
   // Process events
   for (const event of events) {
     nextState.event_history.push(event);
@@ -134,10 +178,14 @@ export function updateState(currentState: State, events: Event[]): State {
   }
 
   // Map stability/intensity to visual emotion
-  if (nextState.stability < 30) {
+  if (nextState.entropy > 70) {
+    nextState.emotion_state = 'panic';
+  } else if (nextState.stability < 30) {
     nextState.emotion_state = 'glitch';
   } else if (nextState.intensity > 80) {
     nextState.emotion_state = 'attack';
+  } else if (nextState.stability > 90 && nextState.speech_sentiment === 'positive') {
+    nextState.emotion_state = 'smug';
   } else if (nextState.stability < 60) {
     nextState.emotion_state = 'alert';
   } else {

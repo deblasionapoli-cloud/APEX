@@ -13,12 +13,13 @@ export default function App() {
   const [state, setState] = useState({ entropy: 0, stability: 100 });
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [sessionLogs, setSessionLogs] = useState<string[]>([]);
+  
   const inputHandlerRef = useRef<InputHandler>(new InputHandler());
   const schedulerRef = useRef<Scheduler | null>(null);
-
-  // Initialize AI
   const aiRef = useRef<GoogleGenAI | null>(null);
-  
+
+  // Initialize AI and Scheduler
   useEffect(() => {
     if (process.env.GEMINI_API_KEY) {
       aiRef.current = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -43,14 +44,43 @@ export default function App() {
     return () => schedulerRef.current?.stop();
   }, []);
 
+  // Update session logs whenever a new full speech is realized
+  useEffect(() => {
+    const currentState = (schedulerRef.current as any)?.state;
+    if (currentState?.display_speech === currentState?.last_speech && currentState?.last_speech !== "") {
+       const timestamp = new Date().toISOString();
+       const logEntry = `[${timestamp}] APEX: ${currentState.last_speech}`;
+       setSessionLogs(prev => {
+         if (prev[prev.length - 1] === logEntry) return prev;
+         return [...prev, logEntry];
+       });
+    }
+  }, [frame]);
+
+  const saveLogs = () => {
+    if (sessionLogs.length === 0) return;
+    const blob = new Blob([sessionLogs.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `apex_session_${new Date().getTime()}.log`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleAIIntent = async (text: string, currentStability: number, currentEntropy: number, history: any[]) => {
     if (!aiRef.current) return;
     setIsProcessing(true);
 
+    // Context for log preservation
+    setSessionLogs(prev => [...prev, `[${new Date().toISOString()}] USER: ${text}`]);
+
     // Extract recent conversational context from event history
     const context = history
       .filter(e => e.type === 'intent' || (e.type === 'command' && e.payload.startsWith('ai_response')))
-      .slice(-4) // Last 4 interactions
+      .slice(-4)
       .map(e => {
         if (e.type === 'intent') return `USER: ${e.payload}`;
         try {
@@ -106,6 +136,12 @@ export default function App() {
     e.preventDefault();
     if (!input.trim()) return;
 
+    if (input.toLowerCase() === 'save' || input.toLowerCase() === 'logs') {
+      saveLogs();
+      setInput('');
+      return;
+    }
+
     const commands = ['ping', 'calm', 'attack', 'glitch', 'speak'];
     const isCommand = commands.some(cmd => input.toLowerCase().startsWith(cmd));
 
@@ -113,7 +149,6 @@ export default function App() {
       inputHandlerRef.current.handleInput(input);
     } else {
       if (aiRef.current) {
-        // Access history directly from scheduler state
         const fullHistory = (schedulerRef.current as any)?.state?.event_history || [];
         handleAIIntent(input, state.stability, state.entropy, fullHistory);
       } else {
@@ -125,57 +160,47 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-[#00FF00] font-mono p-4 flex flex-col items-center justify-center selection:bg-[#023a02] selection:text-[#00FF00] overflow-hidden relative">
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center p-0 overflow-hidden select-none">
       {/* Scanline Overlay */}
-      <div className="fixed inset-0 pointer-events-none z-50 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%]" />
-      
-      {/* Background Glow */}
-      <div 
-        className="fixed inset-0 pointer-events-none z-0 transition-opacity duration-1000"
-        style={{ 
-          background: `radial-gradient(circle_at_50%_50%, rgba(255,0,0,${state.entropy/500}) 0%, transparent 70%)`,
-          opacity: state.entropy / 100
-        }} 
-      />
+      <div className="fixed inset-0 pointer-events-none z-50 opacity-15 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,2px_100%]" />
 
-      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-2xl px-4 z-10 space-y-12">
-        {/* Buffer */}
-        <div className="text-center">
-          <pre className="text-2xl md:text-3xl lg:text-4xl leading-tight select-none whitespace-pre drop-shadow-[0_0_5px_rgba(0,255,0,0.3)]">
+      {/* 480x272 Monitor Container */}
+      <div 
+        className="relative w-[480px] h-[272px] bg-black border border-[#001100] flex flex-col items-center justify-center py-4 px-2 overflow-hidden"
+        style={{ 
+          background: `radial-gradient(circle_at_50%_50%, rgba(0,20,0,0.05) 0%, black 100%)`
+        }}
+      >
+        {/* Entropy Glow (Extremely subtle) */}
+        <div 
+          className="absolute inset-0 pointer-events-none z-0 transition-opacity duration-1000"
+          style={{ 
+            background: `radial-gradient(circle_at_50%_50%, rgba(255,0,0,${state.entropy/1000}) 0%, transparent 80%)`,
+            opacity: state.entropy / 100
+          }} 
+        />
+
+        {/* ASCII Framebuffer Only */}
+        <div className="w-full z-10 flex flex-col items-center">
+          <pre className="text-[10px] md:text-[11px] leading-[1.2] font-mono text-[#00FF00] drop-shadow-[0_0_2px_rgba(0,255,0,0.4)] text-center">
             {frame}
           </pre>
         </div>
 
-        {/* Input */}
-        <form onSubmit={handleSubmit} className="w-full flex items-center gap-4 border-b border-[#002200] pb-2 group focus-within:border-[#00FF00] transition-colors relative max-w-sm">
-          <span className="text-[#00FF00] opacity-20 select-none cursor-default">{isProcessing ? "..." : ">>"}</span>
-          <input 
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            disabled={isProcessing}
-            autoComplete="off"
-            className="flex-1 bg-transparent border-none outline-none text-[#00FF00] placeholder-[#002200] disabled:opacity-30"
-            placeholder={isProcessing ? "PROCESSING" : "TRANSMIT"}
-            autoFocus
-          />
-        </form>
-
-        {/* Cognitive Matrix (Mini HUD) */}
-        <div className="w-64 space-y-4 opacity-20 hover:opacity-100 transition-opacity duration-500">
-           <div className="h-[2px] bg-[#001100] w-full overflow-hidden">
-             <div className="h-full bg-[#00FF00] transition-all duration-300" style={{ width: `${state.stability}%` }} />
-           </div>
-           <div className="h-[2px] bg-[#110000] w-full overflow-hidden">
-             <div className="h-full bg-red-600 transition-all duration-300" style={{ width: `${state.entropy}%` }} />
-           </div>
-        </div>
-      </div>
-
-      <div className="w-full max-w-4xl p-4 flex justify-between text-[10px] tracking-widest text-[#111] uppercase select-none z-10 font-bold">
-        <span>APEX_DAEMON</span>
-        <span>STB: {Math.floor(state.stability)}%</span>
-        <span>ENT: {Math.floor(state.entropy)}%</span>
+        {/* Hidden Global Input Listener (for preview interactions) */}
+        <p className="absolute bottom-1 right-1 text-[5px] text-[#001100] opacity-10">L_STB: {Math.floor(state.stability)} CMD_WAIT</p>
+        <input 
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleSubmit(e);
+            }
+          }}
+          className="absolute opacity-0 pointer-events-none"
+          autoFocus={true}
+        />
       </div>
     </div>
   );

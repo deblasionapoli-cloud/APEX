@@ -28,6 +28,13 @@ export function renderFrame(state: State): string {
     top    = "  [vvvvvvvvvvvvvvvvvvv]  ";
     eyes   = "|    [ > ]     [ < ]    |";
     mouth  = "|    {WWWWWWWWWWW}    |";
+  } else if (emotion_state === 'smug') {
+    eyes   = "|    [ - ]     [ - ]    |";
+    mouth  = "|      /--------~     |";
+  } else if (emotion_state === 'panic') {
+    eyes   = "|    [ ! ]     [ ! ]    |";
+    mouth  = "|   (  O O O O O  )   |";
+    top    = "  [?#?#?#?#?#?#?#?#?#?]  ";
   }
 
   // ENTROPY DISTORTION (Distinctive Trait)
@@ -104,13 +111,39 @@ export function renderFrame(state: State): string {
       return `${l.padEnd(12)} ${line} ${r.padStart(12)}`;
   });
 
-  const frame = [
+  // Apply Smoke (Physical Particles)
+  // We'll overlay them on the mergedLines
+  state.smoke.forEach(p => {
+    const py = Math.floor(p.y);
+    if (py >= 0 && py < mergedLines.length) {
+       const line = mergedLines[py];
+       const px = Math.min(line.length - 1, Math.max(0, 15 + Math.floor(p.x)));
+       mergedLines[py] = line.substring(0, px) + p.char + line.substring(px + 1);
+    }
+  });
+
+  // Apply Glitch Particles
+  state.particles.forEach(p => {
+    const py = Math.floor(p.y);
+    if (py >= 0 && py < mergedLines.length) {
+       const line = mergedLines[py];
+       const px = Math.min(line.length - 1, Math.max(0, 15 + Math.floor(p.x)));
+       mergedLines[py] = line.substring(0, px) + p.char + line.substring(px + 1);
+    }
+  });
+
+  let frame = [
     "",
     ...mergedLines,
     "",
     `[ ${finalSpeech} ]`,
     ""
   ].join('\n');
+
+  if (state.intrusion_alert && animation_phase % 10 < 5) {
+     const banner = "!! INTRUSION_DETECTED !!".padStart(40, ' ').padEnd(50, ' ');
+     frame = `\n${banner}\n` + frame;
+  }
 
   return frame;
 }
