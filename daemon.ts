@@ -7,6 +7,7 @@ import * as readline from 'readline';
 import { InputHandler } from './src/core/input_handler';
 import { Scheduler } from './src/core/scheduler';
 import { SSHServer } from './src/core/ssh_server';
+import { renderFrame } from './src/core/renderer';
 import 'dotenv/config';
 
 /**
