@@ -30,13 +30,17 @@ rl.on('line', (line) => {
 
 console.clear();
 
-const scheduler = new Scheduler(inputHandler, (frame) => {
+const scheduler = new Scheduler(inputHandler, (frame, state) => {
+  // Local Terminal Width
+  const termWidth = process.stdout.columns || 80;
+  const responsiveFrame = renderFrame(state, { width: termWidth });
+  
   // Clear screen and reset cursor for local terminal
   process.stdout.write('\x1b[2J\x1b[0;0H');
-  process.stdout.write(frame);
+  process.stdout.write(responsiveFrame);
   
-  // Also broadcast to SSH clients
-  sshServer.broadcastFrame(frame);
+  // Also broadcast to SSH clients (they will render their own widths)
+  sshServer.broadcastFrame(state);
 });
 
 // Configure SSH port from ENV or default to 2222

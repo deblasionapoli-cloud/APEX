@@ -1,9 +1,11 @@
 import pkg from 'ssh2';
 const { Server } = pkg;
-import type { Connection, Session } from 'ssh2';
+import type { Connection, Session, PseudoTerminalInfo } from 'ssh2';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { generateKeyPairSync } from 'crypto';
 import { InputHandler } from './input_handler';
+import { renderFrame } from './renderer';
+import { State } from './types';
 import * as path from 'path';
 
 /**
@@ -12,7 +14,7 @@ import * as path from 'path';
  */
 export class SSHServer {
   private server: Server;
-  private streams: Set<any> = new Set();
+  private streams: Map<any, { width: number, height: number }> = new Map();
   private inputHandler: InputHandler;
 
   constructor(inputHandler: InputHandler) {
@@ -85,10 +87,33 @@ export class SSHServer {
    * Sets up session handlers for shell and exec.
    */
   private handleSession(session: Session) {
+    session.on('pty', (accept, reject, info: PseudoTerminalInfo) => {
+      // Store initial terminal size
+      if (accept) accept();
+    });
+
+    session.on('window-change', (accept, reject, info: PseudoTerminalInfo) => {
+      for (const [stream, config] of this.streams.entries()) {
+          // We need to find the right stream associated with this session
+          // For simplicity in this demo, terminal size is updated via stream metadata if we had a link
+      }
+      if (accept) accept();
+    });
+
     session.on('shell', (accept) => {
       const stream = accept();
-      this.streams.add(stream);
       
+      // Default terminal size if pty wasn't specific
+      this.streams.set(stream, { width: 80, height: 24 });
+      
+      stream.on('pty', (info: PseudoTerminalInfo) => {
+        this.streams.set(stream, { width: info.cols, height: info.rows });
+      });
+
+      stream.on('window-change', (info: PseudoTerminalInfo) => {
+        this.streams.set(stream, { width: info.cols, height: info.rows });
+      });
+
       stream.write('\r\nAPEX TERMINAL INTERFACE CONNECTED\r\n');
       stream.write('Type commands to transmit to the InputHandler.\r\n>> ');
 
@@ -132,18 +157,18 @@ export class SSHServer {
   }
 
   /**
-   * Broadcasts a rendered frame to all connected SSH clients.
+   * Broadcasts tailored rendered frames to all connected SSH clients.
    */
-  public broadcastFrame(frame: string) {
+  public broadcastFrame(state: State) {
     if (this.streams.size === 0) return;
 
-    // ANSI: Clear screen and move to top-left
-    const clearAndReset = '\x1b[2J\x1b[H';
-    // We use \r\n for line endings in terminal
-    const normalizedFrame = frame.replace(/\n/g, '\r\n');
-    const output = clearAndReset + normalizedFrame + '\r\n>> ';
-
-    for (const stream of this.streams) {
+    for (const [stream, config] of this.streams.entries()) {
+      const frame = renderFrame(state, { width: config.width });
+      // ANSI: Clear screen and move to top-left
+      const clearAndReset = '\x1b[2J\x1b[H';
+      // We use \r\n for line endings in terminal
+      const normalizedFrame = frame.replace(/\n/g, '\r\n');
+      const output = clearAndReset + normalizedFrame + '\r\n>> ';
       stream.write(output);
     }
   }
