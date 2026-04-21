@@ -8,7 +8,7 @@ import { InputHandler } from './src/core/input_handler';
 import { Scheduler } from './src/core/scheduler';
 
 /**
- * DONKEY KONG SSH CORE - STANDALONE DAEMON
+ * APEX CORE - STANDALONE DAEMON
  * 
  * Run with: npx tsx daemon.ts
  */

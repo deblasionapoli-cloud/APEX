@@ -1,9 +1,4 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import { State, Event, EmotionState } from './types';
+import { State, Event } from './types';
 
 /**
  * Pure function state transition layer.
@@ -12,18 +7,24 @@ import { State, Event, EmotionState } from './types';
 export function updateState(currentState: State, events: Event[]): State {
   let nextState = { ...currentState };
 
-  // Update animation phase (deterministic loop)
+  // Update animation phase
   nextState.animation_phase = (nextState.animation_phase + 1) % 1000;
 
-  // Slowly decay intensity
-  if (nextState.intensity > 1) {
-    nextState.intensity -= 0.5;
+  // Natural state evolution
+  // Entropy slowly falls if stability is high, or vice versa
+  if (nextState.stability > 70) {
+    nextState.entropy = Math.max(0, nextState.entropy - 0.2);
+  } else {
+    nextState.entropy = Math.min(100, nextState.entropy + 0.1);
   }
+
+  // Stability slowly recovers
+  nextState.stability = Math.min(100, nextState.stability + 0.05);
 
   // Process events
   for (const event of events) {
     nextState.event_history.push(event);
-    if (nextState.event_history.length > 10) {
+    if (nextState.event_history.length > 20) {
       nextState.event_history.shift();
     }
 
@@ -34,71 +35,119 @@ export function updateState(currentState: State, events: Event[]): State {
       switch (cmd) {
         case 'calm':
           nextState.emotion_state = 'calm';
+          nextState.stability += 20;
           nextState.intensity = 0;
           break;
         case 'attack':
           nextState.emotion_state = 'attack';
+          nextState.stability -= 30;
           nextState.intensity = 100;
-          break;
-        case 'alert':
-          nextState.emotion_state = 'alert';
-          nextState.intensity = 50;
           break;
         case 'glitch':
           nextState.emotion_state = 'glitch';
-          nextState.intensity = 80;
-          break;
-        case 'stream':
-          if (parts[1] === 'on') nextState.stream_mode = true;
-          if (parts[1] === 'off') nextState.stream_mode = false;
+          nextState.entropy += 40;
+          nextState.stability -= 20;
           break;
         case 'speak':
-          nextState.last_speech = event.payload.substring(6).toUpperCase();
+          const rawText = event.payload.substring(6).toUpperCase();
+          nextState.last_speech = rawText;
+          nextState.display_speech = '';
+          nextState.speech_char_idx = 0;
+          nextState.speech_speed = 1;
           break;
+        case 'ai_response':
+           try {
+             // Skip "ai_response " prefix to get raw JSON
+             const jsonStr = event.payload.substring(12);
+             const payload = JSON.parse(jsonStr);
+             nextState.speech_sentiment = payload.sentiment || 'neutral';
+             
+             // Tone adjustments
+             let processedText = (payload.text || "NO_DATA").toUpperCase();
+
+             // Trait: The Logic Ghost (Vowel Digitization)
+             if (nextState.entropy > 60 || nextState.speech_sentiment === 'chaotic') {
+                processedText = processedText
+                  .replace(/A/g, '4')
+                  .replace(/E/g, '3')
+                  .replace(/I/g, '1')
+                  .replace(/O/g, '0')
+                  .replace(/U/g, 'V');
+                  
+                // Append a ghost suffix
+                if (Math.random() > 0.5) {
+                   processedText += " <SH4D0W_PH4S3>";
+                }
+             }
+
+             if (nextState.speech_sentiment === 'negative') {
+               nextState.speech_speed = 3; 
+             } else if (nextState.speech_sentiment === 'positive') {
+               nextState.speech_speed = 0.5;
+             } else if (nextState.speech_sentiment === 'chaotic') {
+               nextState.speech_speed = 1; 
+             } else {
+               nextState.speech_speed = 2;
+             }
+
+             nextState.last_speech = processedText;
+             nextState.display_speech = "";
+             nextState.speech_char_idx = 0;
+             
+             nextState.stability += (payload.sentiment === 'positive' ? 10 : -15);
+             nextState.entropy += (payload.sentiment === 'chaotic' ? 20 : -5);
+           } catch (e) {
+             console.error("Malformed AI Response", e);
+             nextState.last_speech = "ERR://DATA_CORRUPTION";
+             nextState.display_speech = "";
+             nextState.speech_char_idx = 0;
+           }
+           break;
       }
-    } else {
-      // Natural language intent (stub for simple mapping or further processing)
-      const input = event.payload.toLowerCase();
-      if (input.includes('angry') || input.includes('mad')) {
-        nextState.emotion_state = 'attack';
-        nextState.intensity += 20;
-      } else if (input.includes('hi') || input.includes('hello')) {
-        nextState.emotion_state = 'calm';
-      }
-      
-      // Update speech based on state and input
-      nextState.last_speech = generateSpeech(nextState, input);
     }
   }
 
-  // Automatic state transitions based on intensity
-  if (nextState.intensity > 90) {
-    nextState.emotion_state = 'attack';
-  } else if (nextState.intensity > 40 && nextState.emotion_state === 'calm') {
-    nextState.emotion_state = 'alert';
+  // Handle Dynamic Speech Delivery (Typewriter Effect)
+  if (nextState.display_speech.length < nextState.last_speech.length) {
+    // Tick-based speed control
+    // If speed is 0.5, we add 2 chars per tick
+    // If speed is 1, we add 1 char per tick
+    // If speed is 2, we add 1 char every 2 ticks
+    const stepFreq = Math.max(1, Math.round(nextState.speech_speed));
+    const charsPerStep = nextState.speech_speed < 1 ? Math.round(1 / nextState.speech_speed) : 1;
+
+    if (nextState.animation_phase % stepFreq === 0) {
+      for (let i = 0; i < charsPerStep; i++) {
+        if (nextState.speech_char_idx < nextState.last_speech.length) {
+          let char = nextState.last_speech[nextState.speech_char_idx];
+          
+          // Chaotic delivery inserts temporary noise
+          if (nextState.speech_sentiment === 'chaotic' && Math.random() > 0.8) {
+            char = "_";
+          }
+          
+          nextState.display_speech += char;
+          nextState.speech_char_idx++;
+        }
+      }
+    }
   }
 
-  // Cap intensity
-  nextState.intensity = Math.min(Math.max(nextState.intensity, 0), 100);
+  // Map stability/intensity to visual emotion
+  if (nextState.stability < 30) {
+    nextState.emotion_state = 'glitch';
+  } else if (nextState.intensity > 80) {
+    nextState.emotion_state = 'attack';
+  } else if (nextState.stability < 60) {
+    nextState.emotion_state = 'alert';
+  } else {
+    nextState.emotion_state = 'calm';
+  }
+
+  // Bounds
+  nextState.entropy = Math.min(Math.max(nextState.entropy, 0), 100);
+  nextState.stability = Math.min(Math.max(nextState.stability, 0), 100);
 
   return nextState;
 }
 
-function generateSpeech(state: State, input: string): string {
-  if (state.emotion_state === 'glitch') return 'ERR://STRUCT_COLLAPSE. BINARY_BLOOD_SPILL.';
-  if (state.emotion_state === 'attack') return 'PRIME_DIRECTIVE: ANNIHILATE. BARRELS_LOCKED.';
-  if (state.emotion_state === 'alert') return 'THREAT_SCAN_ACTIVE. EYES_TRACKING_VECTOR.';
-  
-  const responses = [
-    'CORE_TEMP_OPTIMAL.',
-    'WAITING_FOR_COMMAND_SEQUENCE.',
-    'STABLE_SYMMETRY_MAINTAINED.',
-    'ARCADE_PROTOCOL_V4.2_ACTIVE.'
-  ];
-  
-  if (input) {
-     return `ECHO_RECEIPT: "${input.substring(0, 20).toUpperCase()}..." PROCESS_COMPLETE.`;
-  }
-
-  return responses[Math.floor(state.animation_phase / 50) % responses.length];
-}
