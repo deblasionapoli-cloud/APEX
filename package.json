@@ -12,8 +12,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "start": "tsx server.ts",
-    "build:bin": "npm run build && esbuild server.ts --bundle --platform=node --target=node20 --outfile=dist/server.bundle.js --external:ssh2 && pkg dist/server.bundle.js --targets node18-linux-arm64 --output apex-bin"
+    "start": "node dist/server.bundle.cjs",
+    "build:lean": "npm run build && esbuild server.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/server.bundle.cjs --external:ssh2 && echo 'BUILD_COMPLETE: Run with node dist/server.bundle.cjs'"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
