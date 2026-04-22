@@ -22,6 +22,13 @@ export interface State {
   last_command_phase: number;
   visual_scale: number; // 0.95 - 1.1
   color_mode: 'standard' | 'warm';
+  hardware_metrics?: {
+    cpu_temp: number;
+    ram_usage: number;
+    clock_speed: number;
+  };
+  context_memory: string[]; // Recent news patterns
+  is_thinking: boolean; // Prevenzione chiamate multiple
 }
 
 export const INITIAL_STATE: State = {
@@ -35,4 +42,11 @@ export const INITIAL_STATE: State = {
   last_command_phase: -1,
   visual_scale: 1.0,
   color_mode: 'standard',
+  hardware_metrics: {
+    cpu_temp: 42,
+    ram_usage: 12,
+    clock_speed: 1.5
+  },
+  context_memory: [],
+  is_thinking: false,
 };

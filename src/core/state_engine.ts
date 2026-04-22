@@ -4,10 +4,10 @@
  */
 
 import { State, Event, EmotionState, INITIAL_STATE } from './types';
+import { askDaemon } from '../services/aiService';
 
 /**
  * Pure function state transition layer.
- * next_state = f(current_state, event_batch)
  */
 export function updateState(currentState: State, events: Event[]): State {
   if (!currentState) {
@@ -17,6 +17,11 @@ export function updateState(currentState: State, events: Event[]): State {
 
   // Update animation phase (deterministic loop)
   nextState.animation_phase = (nextState.animation_phase + 1) % 1000;
+
+  // Initiative logic: every ~45 seconds (450 ticks at 10Hz) to save quota
+  if (nextState.animation_phase % 450 === 0 && !nextState.is_thinking && nextState.speech_queue.length <= 3) {
+    handleInitiative(nextState);
+  }
 
   // Slowly decay intensity
   if (nextState.intensity > 1) {
@@ -104,11 +109,9 @@ export function updateState(currentState: State, events: Event[]): State {
         nextState.intensity = 0;
       }
       
-      // Update speech based on refined persona
-      const aiSpeech = generateSpeech(nextState, input);
-      if (aiSpeech !== nextState.last_speech) {
-        nextState.last_speech = aiSpeech;
-        pushToQueue(nextState, aiSpeech);
+      // Handle AI Speech with context (throttled)
+      if (!nextState.is_thinking) {
+        handleAiResponse(nextState, event.payload);
       }
     }
   }
@@ -125,8 +128,25 @@ export function updateState(currentState: State, events: Event[]): State {
 
   // Update Visual State based on context
   updateVisuals(nextState);
+  updateHardwareDynamics(nextState);
 
   return nextState;
+}
+
+function updateHardwareDynamics(state: State) {
+  if (!state.hardware_metrics) return;
+
+  // Simulate a bit of fluctuation
+  const jitter = Math.sin(state.animation_phase * 0.1);
+  state.hardware_metrics.cpu_temp = 40 + (state.intensity / 4) + jitter;
+  state.hardware_metrics.ram_usage = 10 + (state.intensity / 2) + (Math.random() * 5);
+  
+  // Throttle clock speed if "overheated"
+  if (state.hardware_metrics.cpu_temp > 65) {
+    state.hardware_metrics.clock_speed = 0.8;
+  } else {
+    state.hardware_metrics.clock_speed = 1.5;
+  }
 }
 
 function updateVisuals(state: State) {
@@ -177,6 +197,37 @@ function pushToQueue(state: State, text: string) {
     }
   });
   if (currentLine) state.speech_queue.push(`[ ${currentLine.trim().padEnd(maxWidth)} ]`);
+}
+
+async function handleAiResponse(state: State, input: string) {
+  if (state.is_thinking) return;
+  state.is_thinking = true;
+  try {
+    const hwInfo = state.hardware_metrics 
+      ? ` [HW_LOG: ${state.hardware_metrics.cpu_temp.toFixed(1)}C | RAM: ${state.hardware_metrics.ram_usage.toFixed(0)}%]`
+      : "";
+    const aiResponse = await askDaemon(input + hwInfo, false, state.hardware_metrics);
+    state.last_speech = aiResponse.toUpperCase();
+    pushToQueue(state, aiResponse.toUpperCase());
+  } catch (e) {
+    console.error("AI Response fail", e);
+  } finally {
+    state.is_thinking = false;
+  }
+}
+
+async function handleInitiative(state: State) {
+  if (state.is_thinking) return;
+  state.is_thinking = true;
+  try {
+    const aiResponse = await askDaemon('', true, state.hardware_metrics);
+    state.last_speech = aiResponse.toUpperCase();
+    pushToQueue(state, aiResponse.toUpperCase());
+  } catch (e) {
+     console.error("Initiative fail", e);
+  } finally {
+    state.is_thinking = false;
+  }
 }
 
 function generateSpeech(state: State, input: string): string {

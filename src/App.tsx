@@ -148,7 +148,6 @@ export default function App() {
 
           {/* Terminal Input */}
           <form onSubmit={handleSubmit} className="mt-8 w-full flex items-center gap-2 border-t border-white/5 pt-4 opacity-40 hover:opacity-100 focus-within:opacity-100 transition-all duration-300">
-            <span className={`${themeClass} font-bold text-[10px] tracking-widest uppercase mb-0.5`}>PROTO_SOCKET_v1.0 {'>'}</span>
             <input 
               type="text"
               value={input}
