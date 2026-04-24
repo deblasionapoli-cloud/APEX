@@ -101,10 +101,13 @@ export function updateState(currentState: State, events: Event[]): State {
       } else if (input.includes('hack') || input.includes('root') || input.includes('access')) {
         nextState.emotion_state = 'alert';
         nextState.intensity += 15;
-      } else if (input.includes('why') || input.includes('how') || input.includes('?') || input.includes('explain')) {
+      } else if (input.includes('why') || input.includes('how') || input.includes('?') || input.includes('explain') || input.includes('analizza') || input.includes('scopri')) {
         nextState.emotion_state = 'curious';
         nextState.intensity += 10;
-      } else if (input.includes('wow') || input.includes('amazing') || input.includes('incredible') || input.includes('really')) {
+      } else if (input.includes('crea') || input.includes('inventa') || input.includes('immagina') || input.includes('sperimenta')) {
+        nextState.emotion_state = 'curious';
+        nextState.intensity += 20;
+      } else if (input.includes('wow') || input.includes('amazing') || input.includes('incredible') || input.includes('bello')) {
         nextState.emotion_state = 'surprised';
         nextState.intensity += 25;
       } else if (input.includes('who') || input.includes('identity')) {
@@ -119,6 +122,17 @@ export function updateState(currentState: State, events: Event[]): State {
       if (!nextState.is_thinking) {
         handleAiResponse(nextState, event.payload);
       }
+    }
+  }
+
+  // Dynamic Morphing (Jitter/Instability)
+  if (Math.random() > 0.992 || (nextState.intensity > 85 && Math.random() > 0.95)) {
+    const morphs: any[] = ['blob', 'eye', 'hardware', 'ditto', 'spiky'];
+    const randomMorph = morphs[Math.floor(Math.random() * morphs.length)];
+    if (nextState.current_morph !== randomMorph) {
+      nextState.current_morph = randomMorph;
+      // If it's a random glitch, the target doesn't necessarily change, 
+      // making it a "temporary" instability.
     }
   }
 
@@ -293,16 +307,16 @@ function generateSpeech(state: State, input: string): string {
 
   if (emotion_state === 'attack') {
     return intensity > 80 
-      ? 'PRIME_DIRECTIVE: CORRUPT. BUFFER_OVERFLOW_INITIATED.' 
-      : 'THREAT_NEUTRALIZATION_SEQUENCE_ENGAGED. FATAL_ERROR.';
+      ? 'CRITICAL_INTENSITY: ANALYSIS_OVERFLOW. DATA_SURGE_INITIATED.' 
+      : 'INTELLECTUAL_FRICTION_DETECTED. CALIBRATING_STIMULUS.';
   }
 
   if (emotion_state === 'alert') {
-    return 'UNAUTHORIZED_PROBE_DETECTED. SCANNING_VECTORS_FOR_EXPLOIT.';
+    return 'UNAUTHORIZED_PROBE_DETECTED. SCANNING_FOR_CREATIVE_EXPLOIT.';
   }
 
   if (emotion_state === 'curious') {
-    return 'QUERY_PROCESSED. ANALYZING_ANOMALY_PARAMETERS.';
+    return 'INTRIGUING_DATA_POINT. ANALYZING_NOVEL_PARAMETERS.';
   }
 
   if (emotion_state === 'surprised') {

@@ -16,16 +16,32 @@ export function renderFrame(state: State): string {
   const iScale = intensity / 100;
   const isGlitched = emotion_state === 'glitch';
 
-  // 1. Dynamic Jitter scaling
-  let jitter = "";
-  if (isGlitched || emotion_state === 'attack' || iScale > 0.4) {
-    const jitterThreshold = 0.95 - (iScale * 0.2);
-    jitter = Math.random() > jitterThreshold ? (Math.random() > 0.5 ? "  " : "    ") : "";
-  }
+  // 1. Procedural Background Layer (Data Stream)
+  const bgWidth = 40;
+  const generateBGLine = (phase: number, row: number) => {
+    const seed = (phase + row * 17) % 100;
+    const chars = [" ", " ", " ", " ", ".", "·", "'", "`", " ", " "];
+    let line = "";
+    for (let i = 0; i < bgWidth; i++) {
+       const charIdx = (seed + i * 7) % chars.length;
+       line += chars[charIdx];
+    }
+    return line;
+  };
 
-  // 2. High-Fidelity Blinking
+  // 2. High-Fidelity Blinking & Jitter
   const blinkInterval = isGlitched ? 60 : 180;
   const isBlinking = (animation_phase % blinkInterval < 4) || (isGlitched && Math.random() > 0.9);
+  
+  // Row-specific jitter seed
+  const getRowJitter = (rowIdx: number) => {
+    if (!isGlitched && iScale < 0.4) return "";
+    const rowEntropy = Math.sin(animation_phase * 0.5 + rowIdx * 0.2);
+    if (rowEntropy > 0.8 || Math.random() < (iScale * 0.1)) {
+        return "  ".repeat(Math.floor(Math.random() * 2) + 1);
+    }
+    return "";
+  };
 
   // 3. Eye Movement & Noise
   const isProcessing = state.last_command_phase >= 0 && (animation_phase - state.last_command_phase < 5);
@@ -63,24 +79,24 @@ export function renderFrame(state: State): string {
   if (current_morph === 'eye') {
     const iris = isBlinking ? "---" : (isProcessing ? "***" : (isSpeaking && animation_phase % 2 === 0 ? " O " : " o "));
     spriteLines = [
-      "        .--------.        ",
-      "     .-'          '-.     ",
-      "    /   .--------.   \\    ",
-      "   |   /          \\   |   ",
-      `   |  |    [${iris}]   |  |   `,
-      "   |   \\          /   |   ",
-      "    \\   '--------'   /    ",
-      "     '-.          .-'     ",
-      "        '--------'        "
+      "          ,---.          ",
+      "     _..-'     '-.._     ",
+      "   .'   .-------.   '.   ",
+      "  /    /         \\    \\  ",
+      ` |    |     ${iris}     |    | `,
+      "  \\    \\         /    /  ",
+      "   '.   '-------'   .'   ",
+      "     '-.._     _..-'     ",
+      "          '---'          "
     ];
   } else if (current_morph === 'hardware') {
-    const p = (animation_phase % 4 < 2) ? "_" : " ";
+    const p = (animation_phase % 4 < 2) ? "::" : "..";
     const load = isProcessing ? "||||||||||||||||" : (isSpeaking ? ">>> DATA TX >>>>" : ":: IDLE STATE ::");
     const pins = (animation_phase % 2 === 0) ? "|| || || || || || ||" : " |  |  |  |  |  |  |";
     spriteLines = [
       "   ______________________   ",
       "  |                      |  ",
-      `  | [${p}]  CPU CORE  [${p}] |  `,
+      `  | ${p}  GLITCH.CORE  ${p} |  `,
       `  |  [${load}]  |  `,
       `  |   (${eyeL})  (${eyeR})   |  `,
       "  |  [________________]  |  ",
@@ -102,22 +118,21 @@ export function renderFrame(state: State): string {
       `${pad(3-w*1.5)}  /________\\   `
     ];
   } else if (current_morph === 'spiky') {
-    const spike = isSpeaking 
-        ? (animation_phase % 3 === 0 ? "VVVVV" : " vvv ") 
-        : (isProcessing ? "wwwww" : "=====");
-    const crown = (animation_phase % 4 < 2) ? "     /\\      /\\     " : "    /  \\    /  \\    ";
+    const s1 = animation_phase % 4 === 0 ? " +" : " x";
+    const s2 = animation_phase % 4 === 2 ? " +" : " x";
     spriteLines = [
-      crown,
-      "    /  \\____/  \\    ",
-      `   /  (${eyeL})(${eyeR})  \\   `,
-      `   \\    ${spike}    /   `,
-      "    \\  /\\__/\\  /    ",
-      "     \\/      \\/     "
+      `     ${s1}     |     ${s2}     `,
+      "  \\  |  /      \\  |  /  ",
+      "   \\ | /        \\ | /   ",
+      ` -- (${eyeL}) ---- (${eyeR}) -- `,
+      "   / | \\        / | \\   ",
+      "  /  |  \\      /  |  \\  ",
+      `     ${s1}     |     ${s2}     `
     ];
   } else if (current_morph === 'custom' && state.custom_sprite) {
     spriteLines = state.custom_sprite.split('\n');
   } else {
-    // Default Blob/Carhartt
+    // Default Blob (The Boy with Cap [C])
     let brow = "  .___________________.  ";
     if (emotion_state === 'alert' || emotion_state === 'attack') brow = "  .^^^^^^^^^^^^^^^^^^^.  ";
     if (emotion_state === 'curious') brow = "  .____/________/_____.  ";
@@ -125,14 +140,21 @@ export function renderFrame(state: State): string {
 
     let mouth = "|    {===========}    |";
     if (isSpeaking) {
-      const osc = animation_phase % 4;
-      if (osc === 0) mouth = "|    {    (---)    }    |";
-      else if (osc === 1) mouth = "|    {     ---     }    |";
-      else if (osc === 2) mouth = "|    {      o      }    |";
+      const frames = [
+        "|    {    ---    }    |",
+        "|    {   (---)   }    |",
+        "|    {    -o-    }    |",
+        "|    {     o     }    |",
+        "|    {    ( )    }    |",
+        "|    {    ---    }    |"
+      ];
+      mouth = frames[animation_phase % frames.length];
     } else if (emotion_state === 'attack') {
-      mouth = `|    {VVVVVVVVVVV}    |`;
+      mouth = animation_phase % 2 === 0 ? "|    {VVVVVVVVVVV}    |" : "|    {^^^^^^^^^^^}    |";
     } else if (emotion_state === 'surprised') {
       mouth = "|    {    (   )    }    |";
+    } else if (emotion_state === 'curious') {
+      mouth = animation_phase % 4 < 2 ? "|    {  _______  }    |" : "|    {  -------  }    |";
     }
 
     let nose = "|          ^          |";
@@ -153,6 +175,22 @@ export function renderFrame(state: State): string {
       `    ${mouth}`,
       "    '___________________'  "
     ];
+  }
+
+  // --- ENTROPY & GLITCH OVERLAY ---
+  const entropy = state.intensity / 100;
+  const isCurrentlyGlitching = emotion_state === 'glitch' || Math.random() < (entropy * 0.15);
+
+  if (isCurrentlyGlitching) {
+    spriteLines = spriteLines.map(line => {
+      if (Math.random() < (0.1 + entropy * 0.2)) {
+        return line.split('').map(char => {
+          if (char === ' ') return Math.random() < 0.05 ? "." : " ";
+          return Math.random() < (0.2 + entropy * 0.3) ? ["@", "#", "$", "%", "&", "!", "?", "0", "1", "X"][Math.floor(Math.random() * 10)] : char;
+        }).join('');
+      }
+      return line;
+    });
   }
 
   // 5. Speech Rendering
@@ -193,15 +231,38 @@ export function renderFrame(state: State): string {
     }
   }
 
-  const frame = rawLines.map((line) => {
-    let processed = line;
+  // 5. Final Composite with Background & Distortion
+  const bgLines = rawLines.map((_, idx) => generateBGLine(animation_phase, idx));
+  
+  const frame = rawLines.map((line, idx) => {
+    // Center the foreground line within the background width (40)
+    const padding = Math.max(0, Math.floor((bgWidth - line.trimEnd().length) / 2));
+    const centeredFG = " ".repeat(padding) + line.trim();
+
+    const bg = bgLines[idx] || "";
+    
+    // Merge foreground over background
+    const merged = bg.split('').map((char, charIdx) => {
+        const fgChar = centeredFG[charIdx];
+        if (fgChar && fgChar !== " " && fgChar !== undefined) return fgChar;
+        return char;
+    }).join('');
+
+    let finalLine = merged;
+    
+    // Add horizontal scanline effect (RESTORED)
+    const scanlinePos = (animation_phase % 40);
+    if (idx === scanlinePos || idx === scanlinePos - 1) {
+        finalLine = finalLine.replace(/[^\s]/g, (c) => Math.random() > 0.5 ? "=" : "-");
+    }
+
     if (isGlitched || iScale > 0.6) {
       if (Math.random() < (isGlitched ? 0.3 : 0.1)) {
         const offset = Math.floor(Math.random() * 6) - 3;
-        processed = offset > 0 ? " ".repeat(offset) + processed : processed.substring(Math.abs(offset));
+        finalLine = offset > 0 ? " ".repeat(offset) + finalLine : finalLine.substring(Math.abs(offset));
       }
     }
-    return jitter + processed;
+    return finalLine;
   }).join("\n");
 
   return frame;

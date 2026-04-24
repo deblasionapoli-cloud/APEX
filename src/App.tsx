@@ -266,10 +266,14 @@ export default function App() {
           style={{ transform: `scale(${state.visual_scale})` }}
         >
           <pre 
-            style={{ width: '480px', height: '272px' }}
-            className={`${themeClass} text-sm md:text-base leading-[1.1] tracking-tight whitespace-pre flex flex-col items-center justify-center text-left select-none transition-colors duration-200`}
+            style={{ height: '272px' }}
+            className={`${themeClass} text-sm md:text-base leading-[1.1] tracking-tight whitespace-pre flex flex-col items-center justify-center select-none transition-colors duration-200 overflow-hidden font-mono`}
           >
-            {frame}
+            {frame.split('\n').map((line, i) => (
+              <div key={i} className="flex justify-center w-full">
+                <span className="w-[40ch] text-left">{line}</span>
+              </div>
+            ))}
           </pre>
 
           {/* Terminal Input */}
