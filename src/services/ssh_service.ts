@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Server, Session } from 'ssh2';
+import ssh2 from 'ssh2';
 import { generateKeyPairSync } from 'node:crypto';
 import { renderFrame } from '../core/renderer';
 import { INITIAL_STATE, State } from '../core/types';
@@ -26,7 +26,7 @@ export function startSshServer(options: SshServerOptions) {
     }
   }) as any;
 
-  const server = new Server({
+  const server = new ssh2.Server({
     hostKeys: [privateKey]
   }, (client) => {
     console.log('SSH: Client connected');

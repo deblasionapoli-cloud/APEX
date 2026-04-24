@@ -229,19 +229,19 @@ export default function App() {
         >
           <pre 
             style={{ width: '480px', height: '272px' }}
-            className={`${themeClass} text-sm md:text-base leading-[1.1] tracking-tight whitespace-pre flex items-center justify-center text-center select-none transition-colors duration-200`}
+            className={`${themeClass} text-sm md:text-base leading-[1.1] tracking-tight whitespace-pre flex flex-col items-center justify-center text-left select-none transition-colors duration-200`}
           >
             {frame}
           </pre>
 
           {/* Terminal Input */}
-          <form onSubmit={handleSubmit} className="mt-8 w-full flex items-center gap-2 border-t border-white/5 pt-4 opacity-40 hover:opacity-100 focus-within:opacity-100 transition-all duration-300">
+          <form onSubmit={handleSubmit} className="mt-8 w-full flex items-center gap-2 border-t border-white/20 pt-4 opacity-80 hover:opacity-100 focus-within:opacity-100 transition-all duration-300">
             <input 
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={isAiLoading}
-              className={`${themeClass} flex-1 bg-transparent border-none outline-none text-[10px] uppercase font-bold placeholder-[#ffffff11] tracking-widest ${isAiLoading ? 'opacity-20 animate-pulse' : ''} ${isMaterialistInput ? 'animate-[bounce_0.5s_infinite]' : ''} ${isTupacInput ? 'blur-[0.5px] drop-shadow-[0_0_2px_rgba(255,255,255,0.5)]' : ''}`}
+              className={`${themeClass} flex-1 bg-transparent border-none outline-none text-[12px] uppercase font-bold placeholder-[#ffffff33] tracking-widest ${isAiLoading ? 'opacity-20 animate-pulse' : ''} ${isMaterialistInput ? 'animate-[bounce_0.5s_infinite]' : ''} ${isTupacInput ? 'blur-[0.5px] drop-shadow-[0_0_2px_rgba(255,255,255,0.5)]' : ''}`}
               placeholder={isAiLoading ? "AI_PROCESSING..." : "SEND CMD TO DAEMON..."}
               autoFocus
             />
