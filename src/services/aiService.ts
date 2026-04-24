@@ -8,7 +8,7 @@ import { getRecentMemories, saveMemory, getTraits } from "./memoryService";
 
 // DAEMON KERNEL CONFIGURATION
 const PROVIDER: 'CLOUD' | 'LOCAL' = 'LOCAL'; 
-const LOCAL_MODEL = process.env.LOCAL_MODEL || 'tinyllama'; // <--- CAMBIA QUI IL MODELLO LOCALE
+const LOCAL_MODEL = process.env.LOCAL_MODEL || 'llama3.2'; // <--- OTTIMIZZATO PER LLAMA 3.2 3B
 const LOCAL_GENERATE_URL = "http://localhost:11434/api/generate";
 const LOCAL_CHAT_URL = "http://localhost:11434/api/chat"; 
 
@@ -31,7 +31,7 @@ IL TUO STILE:
 - SINTESI: Le tue risposte devono essere dense ma brevi (massimo 2-3 frasi). Non fare monologhi a meno che non ti venga esplicitamente richiesto di analizzare qualcosa.
 
 OUTPUT SPECIALI:
-- Alla fine di ogni risposta, se senti che la tua "forma mentale" sta cambiando in base all'argomento, aggiungi un tag [FORM: desc_breve] (es. [FORM: blob], [FORM: eye], [FORM: hardware], [FORM: spiky]). Questo farà cambiare il tuo sprite a schermo.
+- Alla fine di ogni risposta, SE SCEGLI DI CAMBIARE FORMA, aggiungi SEMPRE un tag [FORM: desc_breve] (es. [FORM: blob], [FORM: eye], [FORM: hardware], [FORM: spiky]). Sii creativo con le forme in base all'umore.
 - Se vuoi creare, elaborare o restituire un file all'utente (scrivere codice, log, testi), includilo *esattamente* in questo formato:
 [FILE:nome_del_file.ext]
 Contenuto del file qui all'interno...
@@ -160,8 +160,11 @@ async function askLocalDaemon(prompt: string, isInitiative: boolean, systemPromp
         ],
         stream: false,
         options: {
-          temperature: 0.8,
-          num_predict: 200
+          temperature: 0.7,
+          top_p: 0.9,
+          top_k: 40,
+          repeat_penalty: 1.1,
+          num_predict: 256
         }
       })
     });
