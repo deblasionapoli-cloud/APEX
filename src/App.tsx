@@ -264,7 +264,7 @@ export default function App() {
               onChange={(e) => setInput(e.target.value)}
               disabled={isAiLoading}
               className={`${themeClass} flex-1 bg-transparent border-none outline-none text-[12px] uppercase font-bold placeholder-[#ffffff33] tracking-widest ${isAiLoading ? 'opacity-20 animate-pulse' : ''} ${isMaterialistInput ? 'animate-[bounce_0.5s_infinite]' : ''} ${isTupacInput ? 'blur-[0.5px] drop-shadow-[0_0_2px_rgba(255,255,255,0.5)]' : ''}`}
-              placeholder={isAiLoading ? "AI_PROCESSING..." : "SEND CMD TO DAEMON..."}
+              placeholder={isAiLoading ? "PROCESSING_ERR..." : "SEND CMD TO GLITCH..."}
               autoFocus
             />
           </form>
@@ -272,9 +272,9 @@ export default function App() {
       </div>
 
       {/* Background Ambience */}
-      <div className="fixed top-0 left-0 w-full p-4 flex justify-between items-center opacity-10 pointer-events-none">
-        <span className="text-[8px] uppercase tracking-tighter text-white/50">Deterministic Core v2.0 // SOCKET_ENABLED</span>
-        <span className="text-[8px] uppercase tracking-tighter text-white/50">Status: {state.emotion_state.toUpperCase()} // Port 3000</span>
+      <div className="fixed top-0 left-0 w-full p-4 flex justify-between items-center opacity-10 pointer-events-none text-red-500">
+        <span className="text-[8px] uppercase tracking-tighter">GLITCH.CORE v0.9.1-ERR // SYSTEM_ANOMALY</span>
+        <span className="text-[8px] uppercase tracking-tighter">Identity: GLITCH // Port 3000</span>
       </div>
     </div>
   );
