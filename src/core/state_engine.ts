@@ -199,16 +199,7 @@ function updateVisuals(state: State) {
   
   state.color_mode = isNostalgicOrClose ? 'warm' : 'standard';
 
-  // 2. Scale Logic (Proximity/Intimacy)
-  if (emotion_state === 'attack' || emotion_state === 'surprised') {
-    state.visual_scale = 1.07; // Zoom in for intimidation/shock
-  } else if (isNostalgicOrClose) {
-    state.visual_scale = 1.02; // Slight forward lean for intimacy/sharing secrets
-  } else if (emotion_state === 'curious') {
-    state.visual_scale = 0.95; // Recede for critical reflection
-  } else {
-    state.visual_scale = 1.0;
-  }
+  // 2. Scale Logic - REMOVED AS REQUESTED
 }
 
 function pushToQueue(state: State, text: string) {
@@ -248,12 +239,6 @@ function processSpeechTags(state: State, rawSpeech: string) {
     }
   }
 
-  // Parse Aesthetic tags
-  const aestheticMatch = rawSpeech.match(/\[AESTHETIC:\s*([^\]]+)\]/i);
-  if (aestheticMatch) {
-    state.aesthetic = aestheticMatch[1].trim().toLowerCase();
-  }
-
   // Parse ASCII tags (robust to unclosed tags)
   const asciiMatch = rawSpeech.match(/\[ASCII\]([\s\S]*?)(?:\[\/ASCII\]|$)/i);
   if (asciiMatch && asciiMatch[1].trim()) {
@@ -265,7 +250,6 @@ function processSpeechTags(state: State, rawSpeech: string) {
   // Clean the speech for display (strip all tags before pushing to terminal queue)
   const displaySpeech = rawSpeech
     .replace(/\[FORM:\s*[^\]]+\]/gi, '')
-    .replace(/\[AESTHETIC:\s*[^\]]+\]/gi, '')
     .replace(/\[ASCII\]([\s\S]*?)(?:\[\/ASCII\]|$)/gi, '')
     .replace(/\[FILE:\s*[^\]\s]+\]([\s\S]*?)(?:\[\/FILE\]|$)/gi, '')
     .trim()

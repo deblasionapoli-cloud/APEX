@@ -216,26 +216,12 @@ export default function App() {
   const isMaterialistInput = materialistKeywords.some(kw => input.toLowerCase().includes(kw));
   const isTupacInput = input.toLowerCase().includes('tupac');
 
-  // Aesthetic mapping
-  const getAestheticClass = () => {
-    const { aesthetic } = state;
-    if (aesthetic === 'brutalist') return "bg-white text-black font-bold uppercase";
-    if (aesthetic === 'neon') return "text-pink-500 drop-shadow-[0_0_12px_rgba(236,72,153,0.8)]";
-    if (aesthetic === 'matrix') return "text-green-400 font-mono";
-    if (aesthetic === 'overload') return "bg-[#00FF00] text-black font-black";
-    if (aesthetic === 'minimal') return "text-white/20 blur-[0.3px]";
-    if (aesthetic === 'bombing') return "bg-[rgba(255,100,0,0.1)] text-[#FF6400] font-bold border-2 border-[#FF6400]";
-    return "";
-  };
-
-  const aestheticClass = getAestheticClass();
-
   return (
     <div 
       onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
       onDragLeave={() => setIsDragging(false)}
       onDrop={handleDrop}
-      className={`min-h-screen bg-[#050505] flex flex-col items-center justify-center p-4 font-mono selection:bg-[#00FF00] selection:text-black relative overflow-hidden transition-colors duration-500 ${isDragging ? 'ring-2 ring-[#00FF00] ring-inset' : ''} ${aestheticClass}`}
+      className={`min-h-screen bg-[#050505] flex flex-col items-center justify-center p-4 font-mono selection:bg-[#00FF00] selection:text-black relative overflow-hidden transition-colors duration-500 ${isDragging ? 'ring-2 ring-[#00FF00] ring-inset' : ''}`}
     >
       {/* Subtle CRT Overlays */}
       <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%]" />
@@ -276,29 +262,27 @@ export default function App() {
         />
         
         <div 
-          className="relative flex flex-col items-center bg-black/40 border border-white/5 rounded-sm p-8 backdrop-blur-sm shadow-2xl transition-transform duration-500"
-          style={{ transform: `scale(${state.visual_scale})` }}
+          className="relative flex flex-col items-center bg-black/40 border border-white/5 rounded-sm px-2 py-2 backdrop-blur-sm shadow-2xl transition-all duration-300 w-[480px] h-[272px] overflow-hidden"
         >
           <pre 
-            style={{ minHeight: '272px', height: 'auto' }}
-            className={`${themeClass} text-sm md:text-base leading-[1.1] tracking-tight whitespace-pre flex flex-col items-center justify-center select-none transition-colors duration-200 overflow-hidden font-mono max-h-[400px]`}
+            className={`${themeClass} text-[10px] leading-none tracking-tight whitespace-pre flex flex-col items-center justify-center select-none transition-colors duration-200 overflow-hidden font-mono w-full flex-1`}
           >
             {frame.split('\n').map((line, i) => (
               <div key={i} className="flex justify-center w-full">
-                <span className="w-[40ch] text-left">{line}</span>
+                <span className="w-[80ch] text-left">{line}</span>
               </div>
             ))}
           </pre>
 
           {/* Terminal Input */}
-          <div className="mt-8 w-full flex items-center gap-4 border-t border-white/20 pt-4 opacity-80 hover:opacity-100 focus-within:opacity-100 transition-all duration-300">
+          <div className="mt-1 w-full flex items-center gap-4 border-t border-white/10 pt-1 opacity-80 hover:opacity-100 focus-within:opacity-100 transition-all duration-300">
             <form onSubmit={handleSubmit} className="flex-1 flex items-center gap-2">
               <input 
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 disabled={isAiLoading}
-                className={`${themeClass} flex-1 bg-transparent border-none outline-none text-[12px] uppercase font-bold placeholder-[#ffffff33] tracking-widest ${isAiLoading ? 'opacity-20 animate-pulse' : ''} ${isMaterialistInput ? 'animate-[bounce_0.5s_infinite]' : ''} ${isTupacInput ? 'blur-[0.5px] drop-shadow-[0_0_2px_rgba(255,255,255,0.5)]' : ''}`}
+                className={`${themeClass} flex-1 bg-transparent border-none outline-none text-[12px] uppercase font-bold placeholder-[#ffffff33] tracking-widest ${isAiLoading ? 'opacity-20 animate-pulse' : ''}`}
                 placeholder={isAiLoading ? "PROCESSING_ERR..." : "SEND CMD TO GLITCH..."}
                 autoFocus
               />

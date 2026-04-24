@@ -17,23 +17,11 @@ export function renderFrame(state: State): string {
   const isGlitched = emotion_state === 'glitch';
 
   // 1. Procedural Background Layer (Data Stream)
-  const bgWidth = 40;
+  const bgWidth = 80;
+  const bgHeight = 22;
   const generateBGLine = (phase: number, row: number) => {
     const seed = (phase + row * 17) % 100;
-    let chars = [" ", " ", " ", " ", ".", "·", "'", "`", " ", " "];
-    
-    if (state.aesthetic === 'overload') {
-        chars = ["@", "#", "8", "&", "G", "L", "I", "T", "C", "H"];
-    } else if (state.aesthetic === 'minimal') {
-        chars = [" ", " ", " ", " ", " ", " ", "·", " ", " ", " "];
-    } else if (state.aesthetic === 'brutalist') {
-        chars = ["█", "▓", "▒", "░", " ", " ", " ", " ", " ", " "];
-    } else if (state.aesthetic === 'matrix') {
-        chars = ["0", "1", " ", " ", " ", " ", " ", " ", " ", " "];
-    } else if (state.aesthetic === 'bombing') {
-        chars = ["#", "B", "O", "M", "B", "%", "X", "=", " ", " "];
-    }
-
+    const chars = [" ", " ", " ", " ", ".", "·", "'", "`", " ", " "];
     let line = "";
     for (let i = 0; i < bgWidth; i++) {
        const charIdx = (seed + i * 7) % chars.length;
@@ -233,30 +221,20 @@ export function renderFrame(state: State): string {
   }
 
   const signalLine = isProcessing ? "      [ SIGNAL_RX ]      " : "";
-  let rawLines = [...spriteLines, signalLine, ...speechLines];
+  let rawLines = [...spriteLines, signalLine, ...speechLines].slice(0, 20); // Limit lines
   
-  // Apply Distortion
-  if (isGlitched || iScale > 0.8) {
-    if (Math.random() > 0.9) {
-      const idx1 = Math.floor(Math.random() * rawLines.length);
-      const idx2 = Math.floor(Math.random() * rawLines.length);
-      [rawLines[idx1], rawLines[idx2]] = [rawLines[idx2], rawLines[idx1]];
-    }
-  }
-
   // 4. Composite: Foreground over Background
-  const bgLines = rawLines.map((_, idx) => generateBGLine(animation_phase, idx));
+  const bgLines = new Array(bgHeight).fill("").map((_, idx) => generateBGLine(animation_phase, idx));
   
   // Calculate character bounding box for uniform centering
   const maxLineLength = Math.max(...rawLines.map(l => l.length));
   const globalPadding = Math.max(0, Math.floor((bgWidth - maxLineLength) / 2));
 
-  const frame = rawLines.map((line, idx) => {
+  const frame = bgLines.map((bg, idx) => {
+    const line = rawLines[idx] || "";
     // Preserve relative internal spacing by using one global offset
     const centeredFG = " ".repeat(globalPadding) + line;
 
-    const bg = bgLines[idx] || "";
-    
     // Merge foreground over background
     const merged = bg.split('').map((char, charIdx) => {
         const fgChar = centeredFG[charIdx];
