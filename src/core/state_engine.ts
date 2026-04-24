@@ -227,18 +227,18 @@ function processSpeechTags(state: State, rawSpeech: string) {
     }
   }
 
-  // Parse ASCII tags
-  const asciiMatch = rawSpeech.match(/\[ASCII\]([\s\S]*?)\[\/ASCII\]/i);
-  if (asciiMatch) {
+  // Parse ASCII tags (robust to unclosed tags)
+  const asciiMatch = rawSpeech.match(/\[ASCII\]([\s\S]*?)(?:\[\/ASCII\]|$)/i);
+  if (asciiMatch && asciiMatch[1].trim()) {
     state.custom_sprite = asciiMatch[1].trim();
     state.morph_target = 'custom';
     state.emotion_state = 'glitch';
   }
 
-  // Clean the speech for display
+  // Clean the speech for display (strip all tags before pushing to terminal queue)
   const displaySpeech = rawSpeech
     .replace(/\[FORM:\s*[^\]]+\]/gi, '')
-    .replace(/\[ASCII\][\s\S]*?\[\/ASCII\]/gi, '')
+    .replace(/\[ASCII\]([\s\S]*?)(?:\[\/ASCII\]|$)/gi, '')
     .replace(/\[FILE:\s*[^\]\s]+\]([\s\S]*?)(?:\[\/FILE\]|$)/gi, '')
     .trim()
     .toUpperCase();
