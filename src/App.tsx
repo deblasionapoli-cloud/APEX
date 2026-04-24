@@ -380,7 +380,7 @@ export default function App() {
         {/* Fullscreen Input (Fixed overlay) */}
         {isFullscreen && (
           <motion.div 
-            initial={{ y: 20, opacity: 0 }}
+            initial={{ y: 50, opacity: 0 }}
             animate={{ 
               y: [0, -6, 0],
               opacity: 1
@@ -389,16 +389,16 @@ export default function App() {
               y: { duration: 5, repeat: Infinity, ease: "easeInOut" },
               opacity: { duration: 0.5 }
             }}
-            className="fixed bottom-10 left-1/2 -translate-x-1/2 w-[500px] flex items-center gap-4 bg-black/80 border border-white/5 rounded-sm px-6 py-3 opacity-20 hover:opacity-100 focus-within:opacity-100 transition-all duration-500 z-50 backdrop-blur-xl"
+            className="fixed bottom-12 left-1/2 -translate-x-1/2 w-[90vw] max-w-[600px] flex items-center gap-4 bg-black/95 border border-white/20 rounded-md px-6 py-4 opacity-40 hover:opacity-100 focus-within:opacity-100 transition-all duration-500 z-50 backdrop-blur-2xl shadow-[0_0_40px_rgba(255,255,255,0.1)]"
           >
-             <form onSubmit={handleSubmit} className="flex-1 flex items-center gap-2">
-              <span className={`${themeClass} text-[12px] opacity-40 font-bold tracking-widest animate-pulse`}>CMD_</span>
+             <form onSubmit={handleSubmit} className="flex-1 flex items-center gap-3">
+              <span className={`${themeClass} text-[14px] opacity-60 font-bold tracking-widest animate-pulse`}>CMD_</span>
               <input 
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 disabled={isAiLoading}
-                className={`${themeClass} flex-1 bg-transparent border-none outline-none text-[14px] uppercase font-bold placeholder-[#ffffff11] tracking-widest ${isAiLoading ? 'opacity-20 animate-pulse' : ''}`}
+                className={`${themeClass} flex-1 bg-transparent border-none outline-none text-[18px] uppercase font-bold placeholder-[#ffffff22] tracking-widest ${isAiLoading ? 'opacity-20 animate-pulse' : ''}`}
                 placeholder={isAiLoading ? "..." : "TYPE_COMMAND"}
                 autoFocus
               />
