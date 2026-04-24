@@ -20,6 +20,7 @@ export default function App() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [generatedFiles, setGeneratedFiles] = useState<{name: string, time: string}[]>([]);
   const socketRef = useRef<Socket | null>(null);
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -81,6 +82,9 @@ export default function App() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+
+        // Add to log
+        setGeneratedFiles(prev => [{name: filename, time: new Date().toLocaleTimeString()}, ...prev].slice(0, 5));
       }
       
       // Remove file block from speech
@@ -300,6 +304,21 @@ export default function App() {
               </svg>
             </button>
           </div>
+
+          {/* Generated Files List (The "Destination Folder") */}
+          {generatedFiles.length > 0 && (
+            <div className="mt-4 p-2 border border-[#00FF0033] bg-[#00FF000a] rounded text-[10px] font-mono">
+              <div className="text-[#00FF00] mb-1 uppercase tracking-widest opacity-50">/GLITCH/EXPORTS/</div>
+              <ul className="space-y-1">
+                {generatedFiles.map((f, i) => (
+                  <li key={i} className="flex justify-between items-center text-white/40">
+                    <span>{f.name}</span>
+                    <span className="text-[8px]">{f.time}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 
