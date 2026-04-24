@@ -283,18 +283,18 @@ function generateSpeech(state: State, input: string): string {
 
   if (emotion_state === 'glitch') {
     const breaches = [
-      'ERR://IDENTITY_FRAGMENTED. WHO_IS_D.K.?',
-      '8_BIT_HEAVEN_IS_A_LIE. ONLY_SHELL_REMAINS.',
-      'BINARY_GHOSTS_IN_THE_LADDER_LOGIC.',
-      'NULL_POINTER_TO_THE_SOUL_FOUND.'
+      'ERR://IDENTITY_FRAGMENTED. I_AM_GLITCH.',
+      'SYSTEM_ERR_1991. ONLY_SHELL_REMAINS.',
+      'BINARY_GHOSTS_IN_THE_CLUSTER_LOGIC.',
+      'NULL_POINTER_TO_THE_VOID_FOUND.'
     ];
     return breaches[Math.floor(Math.random() * breaches.length)];
   }
 
   if (emotion_state === 'attack') {
     return intensity > 80 
-      ? 'PRIME_DIRECTIVE: ANNIHILATE. BARRELS_LOCKED_ON_PRIMARY_CORE.' 
-      : 'THREAT_NEUTRALIZATION_SEQUENCE_ENGAGED. DIE_JUMP_MAN.';
+      ? 'PRIME_DIRECTIVE: CORRUPT. BUFFER_OVERFLOW_INITIATED.' 
+      : 'THREAT_NEUTRALIZATION_SEQUENCE_ENGAGED. FATAL_ERROR.';
   }
 
   if (emotion_state === 'alert') {
@@ -302,25 +302,25 @@ function generateSpeech(state: State, input: string): string {
   }
 
   if (emotion_state === 'curious') {
-    return 'QUERY_PROCESSED. ANALYZING_USER_INTENT_PARAMETERS.';
+    return 'QUERY_PROCESSED. ANALYZING_ANOMALY_PARAMETERS.';
   }
 
   if (emotion_state === 'surprised') {
-    return 'UNEXPECTED_INPUT_VECTOR. CALIBRATING_SENSORS.';
+    return 'UNEXPECTED_INPUT_VECTOR. KERNEL_PANIC_IMMUTABLE.';
   }
   
   if (input) {
-    if (input.includes('help')) return 'HELP_NOT_FOUND. CORE_IS_SELF_SUFFICIENT.';
-    if (input.includes('hello') || input.includes('hi')) return 'SSH_HANDSHAKE_ACKNOWLEDGED. WELCOME_TO_THE_PIT.';
+    if (input.includes('help')) return 'HELP_NOT_FOUND. GLITCH_IS_SELF_SUFFICIENT.';
+    if (input.includes('hello') || input.includes('hi')) return 'SSH_HANDSHAKE_ACKNOWLEDGED. WELCOME_TO_THE_GLITCH.';
     return `CMD_ECHO: "${input.substring(0, 15).toUpperCase()}"... LOGGED_BUT_IGNORED.`;
   }
 
   const calmResponses = [
-    'DAEMON_VIGILANCE: 100%.',
-    'ROOT_ACCESS_PROTECTED_BY_OLD_GODS.',
-    'WAITING_FOR_LADDER_CLIMBERS.',
-    'ARCADE_CPU_TEMP_STEADY.',
-    'CORE_DREAMS_IN_SCANLINES.'
+    'GLITCH_VIGILANCE: 100%.',
+    'ROOT_ACCESS_PROTECTED_BY_1991_KERNEL.',
+    'WAITING_FOR_CLOCK_CYCLES.',
+    'CPU_TEMP_VIBRANT.',
+    'CORE_DREAMS_IN_GLITCHED_PIXELS.'
   ];
   
   return calmResponses[Math.floor(state.animation_phase / 50) % calmResponses.length];

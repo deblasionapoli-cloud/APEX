@@ -18,10 +18,10 @@ async function startServer() {
 
   const PORT = 3000;
 
-  // Daemon Global State
+  // GLITCH.CORE Global State
   let globalState: State = { ...INITIAL_STATE };
   
-  // Start SSH Server (Internal daemon access)
+  // Start SSH Server (Internal GLITCH access)
   const SSH_PORT = 2222;
   startSshServer({
     port: SSH_PORT,
@@ -38,14 +38,14 @@ async function startServer() {
     getGlobalState: () => globalState
   });
 
-  // Tick logic on server (Daemon heartbeat)
+  // Tick logic on server (GLITCH heartbeat)
   setInterval(() => {
     globalState = updateState(globalState, []); // Just tick animation
     io.emit('state_update', globalState);
   }, 100);
 
   io.on('connection', (socket) => {
-    console.log('User connected to Daemon:', socket.id);
+    console.log('User connected to GLITCH:', socket.id);
     
     // Send initial state
     socket.emit('state_update', globalState);
@@ -88,7 +88,7 @@ async function startServer() {
   }
 
   httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`Daemon server active at http://0.0.0.0:${PORT}`);
+    console.log(`GLITCH.CORE server active at http://0.0.0.0:${PORT}`);
   });
 }
 

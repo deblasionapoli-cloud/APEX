@@ -49,9 +49,9 @@ export function startSshServer(options: SshServerOptions) {
         session.on('shell', (accept, reject) => {
           const stream = accept();
           
-          stream.write('\r\n*** DAEMON SSH CORE v1.0 ***\r\n');
-          stream.write('Handshake complete. You are now connected to the pit.\r\n');
-          stream.write('Type commands to interact with the Daemon.\r\n\r\n');
+          stream.write('\r\n*** GLITCH.CORE v0.9.1-ERR ***\r\n');
+          stream.write('Handshake complete. Entropy level critical.\r\n');
+          stream.write('Type commands to interact with GLITCH.\r\n\r\n');
           stream.write('> ');
 
           let buffer = '';
@@ -65,7 +65,7 @@ export function startSshServer(options: SshServerOptions) {
                 const cmd = buffer.trim();
                 if (cmd) {
                   onCommand(cmd);
-                  stream.write(`\r\n[ACK] Command sent to core: "${cmd}"\r\n`);
+                  stream.write(`\r\n[ACK] Injection successful: "${cmd}"\r\n`);
                 }
                 buffer = '';
                 stream.write('\r\n> ');
@@ -88,7 +88,7 @@ export function startSshServer(options: SshServerOptions) {
           console.log(`SSH EXEC: ${cmd}`);
           
           onCommand(cmd);
-          stream.write(`Daemon received: ${cmd}\n`);
+          stream.write(`GLITCH received: ${cmd}\n`);
           
           // Optionally return the current state frame as output
           const frame = renderFrame(getGlobalState());
@@ -117,7 +117,7 @@ export function startSshServer(options: SshServerOptions) {
   });
 
   server.listen(port, '0.0.0.0', () => {
-    console.log(`SSH: Daemon core listening on port ${port}`);
+    console.log(`SSH: GLITCH.CORE listening on port ${port}`);
   });
 
   return server;

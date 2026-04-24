@@ -29,7 +29,7 @@
   "firestore": {
     "/memories/{memoryId}": {
       "schema": "JournalEntry",
-      "description": "A collection of long-term memories for the Daemon."
+      "description": "A collection of long-term memories for GLITCH.CORE."
     }
   }
 }
