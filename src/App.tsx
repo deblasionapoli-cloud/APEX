@@ -8,9 +8,9 @@ import { io, Socket } from 'socket.io-client';
 import { State, INITIAL_STATE } from './core/types';
 import { renderFrame } from './core/renderer';
 import { askDaemon } from './services/aiService';
-import { auth, signIn, signOut } from './services/memoryService';
+import { auth, signIn, signOut, onRemoteCommand, markCommandProcessed, sendRemoteCommand } from './services/memoryService';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { Maximize2, Minimize2 } from 'lucide-react';
+import { Maximize2, Minimize2, Radio, Terminal } from 'lucide-react';
 import { motion } from 'motion/react';
 
 import { imageToAscii } from './utils/imageUtils';
@@ -23,6 +23,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isRemoteMode, setIsRemoteMode] = useState(false);
   const [generatedFiles, setGeneratedFiles] = useState<{name: string, time: string}[]>([]);
   const socketRef = useRef<Socket | null>(null);
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -45,8 +46,22 @@ export default function App() {
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
+  // Remote Command Listener
+  useEffect(() => {
+    if (user && !isRemoteMode) {
+      const unsub = onRemoteCommand(async (cmd, id) => {
+        console.log("Remote command received:", cmd);
+        await handleCommandExecution(cmd);
+        await markCommandProcessed(id);
+      });
+      return () => unsub?.();
+    }
+  }, [user, isRemoteMode]);
+
   const resetIdleTimer = () => {
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    if (isRemoteMode) return;
+    
     // Più frequente: tra 45 e 120 secondi di inattività
     const randomInterval = 45000 + Math.random() * 75000;
     
@@ -81,7 +96,7 @@ export default function App() {
       socket.disconnect();
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
-  }, []);
+  }, [isRemoteMode]);
 
   const processDaemonResponse = (response: string) => {
     let cleanResponse = response;
@@ -126,14 +141,27 @@ export default function App() {
       cleanResponse = cleanResponse.replace(/\[FORM:\s*[^\]]+\]/gi, '').replace(/\s+/g, ' ').trim();
     }
 
-    // Check for custom ASCII: [ASCII]...[/ASCII]
-    const asciiMatch = response.match(/\[ASCII\]([\s\S]*?)\[\/ASCII\]/i);
-    // We don't strip it here yet, because the server's speak command needs to see it.
-    // However, for the local intent/speak flow, we might want to ensure the server gets the full payload.
-    
-    if (cleanResponse || asciiMatch) {
-      // Send the UNMODIFIED response to the server so it can handle all tags
+    if (cleanResponse || morphMatch) {
       socketRef.current?.emit('command', `speak ${response}`);
+    }
+  };
+
+  const handleCommandExecution = async (cmd: string) => {
+    const cleanInput = cmd.trim().toLowerCase();
+    if (!cleanInput || !socketRef.current) return;
+
+    resetIdleTimer();
+
+    const systemCommands = ['calm', 'attack', 'alert', 'glitch', 'stream on', 'stream off', 'morph'];
+    const isSystemCmd = systemCommands.some(cmd => cleanInput.startsWith(cmd));
+
+    if (isSystemCmd) {
+      socketRef.current.emit('command', cleanInput);
+    } else {
+      setIsAiLoading(true);
+      const aiResponse = await askDaemon(cleanInput);
+      setIsAiLoading(false);
+      processDaemonResponse(aiResponse);
     }
   };
 
@@ -179,27 +207,18 @@ export default function App() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanInput = input.trim().toLowerCase();
-    if (!cleanInput || !socketRef.current || isAiLoading) return;
+    const cleanInput = input.trim();
+    if (!cleanInput) return;
 
-    resetIdleTimer();
-
-    const systemCommands = ['calm', 'attack', 'alert', 'glitch', 'stream on', 'stream off', 'morph'];
-    const isSystemCmd = systemCommands.some(cmd => cleanInput.startsWith(cmd));
-
-    if (isSystemCmd) {
-      socketRef.current.emit('command', cleanInput);
-    } else {
-      setIsAiLoading(true);
-      const aiResponse = await askDaemon(cleanInput);
-      setIsAiLoading(false);
-      processDaemonResponse(aiResponse);
+    if (isRemoteMode) {
+      await sendRemoteCommand(cleanInput);
+      setInput('');
+      return;
     }
 
+    await handleCommandExecution(cleanInput);
     setInput('');
   };
-
-  // ... (rest of theme and UI logic)
 
   // Adaptive Color Logic
   const getTerminalTheme = () => {
@@ -240,10 +259,50 @@ export default function App() {
 
   const themeClass = getTerminalTheme();
 
-  // Input Shiver/Ghosting detection
-  const materialistKeywords = ['soldi', 'luxury', 'money', 'comprare', 'profitto', 'brand', 'marketing', 'sucesso'];
-  const isMaterialistInput = materialistKeywords.some(kw => input.toLowerCase().includes(kw));
-  const isTupacInput = input.toLowerCase().includes('tupac');
+  // If in Remote Mode, show a simplified UI
+  if (isRemoteMode) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-6 font-mono text-phosphor-green selection:bg-phosphor-green selection:text-black">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md bg-black/50 border border-phosphor-green/20 rounded-lg p-8 backdrop-blur-xl shadow-[0_0_50px_rgba(0,255,0,0.1)]"
+        >
+          <div className="flex items-center gap-3 mb-8 opacity-50">
+            <Radio className="animate-pulse" size={20} />
+            <h1 className="text-xs uppercase tracking-[0.3em] font-bold">Remote Command Uplink</h1>
+          </div>
+          
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="relative">
+              <span className="absolute left-0 top-0 text-phosphor-green/40 text-xs tracking-tighter">TARGET: GLITCH.CORE</span>
+              <input 
+                type="text"
+                autoFocus
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                className="w-full bg-transparent border-b border-phosphor-green/10 focus:border-phosphor-green/60 outline-none py-4 text-xl uppercase tracking-widest transition-all"
+                placeholder="TYPE_INPUT"
+              />
+            </div>
+            <button 
+              type="submit"
+              className="w-full bg-phosphor-green/10 hover:bg-phosphor-green/20 border border-phosphor-green/20 text-phosphor-green py-3 rounded-sm uppercase tracking-[0.4em] text-[10px] transition-all"
+            >
+              Execute_Sequence
+            </button>
+          </form>
+
+          <button 
+            onClick={() => setIsRemoteMode(false)}
+            className="mt-12 text-[8px] uppercase tracking-widest text-white/20 hover:text-white/60 transition-colors block mx-auto"
+          >
+            Switch_Back_To_Terminal
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -258,6 +317,15 @@ export default function App() {
 
       {/* Auth UI */}
       <div className="fixed top-4 right-4 z-[60] flex items-center gap-4">
+        {user && (
+          <button 
+            onClick={() => setIsRemoteMode(true)}
+            className="flex items-center gap-2 text-[8px] uppercase tracking-widest text-[#00FF00]/40 hover:text-[#00FF00] transition-colors border border-[#00FF00]/10 px-2 py-1 rounded-sm"
+          >
+            <Radio size={10} />
+            Remote_Uplink
+          </button>
+        )}
         {user ? (
           <button 
             onClick={signOut}

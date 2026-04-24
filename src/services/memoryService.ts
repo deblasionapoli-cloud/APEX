@@ -69,3 +69,51 @@ export async function getTraits(count: number = 10): Promise<string[]> {
     return [];
   }
 }
+
+// Remote Input Bridge
+import { onSnapshot, updateDoc, doc } from 'firebase/firestore';
+
+export function onRemoteCommand(callback: (command: string, id: string) => void) {
+  if (!auth.currentUser) return () => {};
+  
+  const q = query(
+    collection(db, 'remote_inputs'),
+    where('userId', '==', auth.currentUser.uid),
+    where('processed', '==', false),
+    orderBy('timestamp', 'asc'),
+    limit(1)
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      if (change.type === 'added') {
+        const data = change.doc.data();
+        callback(data.command, change.doc.id);
+      }
+    });
+  });
+}
+
+export async function markCommandProcessed(id: string) {
+  try {
+    await updateDoc(doc(db, 'remote_inputs', id), {
+      processed: true
+    });
+  } catch (e) {
+    console.error("Error marking command processed:", e);
+  }
+}
+
+export async function sendRemoteCommand(command: string) {
+  if (!auth.currentUser) return;
+  try {
+    await addDoc(collection(db, 'remote_inputs'), {
+      command,
+      userId: auth.currentUser.uid,
+      timestamp: serverTimestamp(),
+      processed: false
+    });
+  } catch (e) {
+    console.error("Error sending remote command:", e);
+  }
+}

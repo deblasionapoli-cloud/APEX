@@ -33,5 +33,20 @@ service cloud.firestore {
       // Memories are generally immutable to represent fixed history
       allow update: if false;
     }
+
+    function isValidRemoteCommand(data) {
+      return data.command is string && data.command.size() <= 500 &&
+             data.timestamp is timestamp &&
+             data.userId == request.auth.uid &&
+             (!('processed' in data) || data.processed is bool);
+    }
+
+    match /remote_inputs/{inputId} {
+      allow read, list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidRemoteCommand(request.resource.data) && isValidId(inputId);
+      allow update: if isSignedIn() && isOwner(resource.data.userId) && 
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['processed']);
+      allow delete: if isOwner(resource.data.userId);
+    }
   }
 }

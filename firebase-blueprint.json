@@ -24,12 +24,37 @@
         }
       },
       "required": ["content", "timestamp", "userId"]
+    },
+    "RemoteCommand": {
+      "title": "Remote Command",
+      "description": "A command sent from a remote device to be processed by the main display.",
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "processed": {
+          "type": "boolean"
+        },
+        "userId": {
+          "type": "string"
+        }
+      },
+      "required": ["command", "timestamp", "userId"]
     }
   },
   "firestore": {
     "/memories/{memoryId}": {
       "schema": "JournalEntry",
       "description": "A collection of long-term memories for GLITCH.CORE."
+    },
+    "/remote_inputs/{inputId}": {
+      "schema": "RemoteCommand",
+      "description": "Remote commands for terminal input synchronization."
     }
   }
 }
