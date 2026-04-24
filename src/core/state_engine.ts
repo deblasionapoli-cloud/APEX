@@ -77,11 +77,30 @@ export function updateState(currentState: State, events: Event[]): State {
           if (parts[1] === 'on') nextState.stream_mode = true;
           if (parts[1] === 'off') nextState.stream_mode = false;
           break;
+        case 'morph':
+          const targetMorph = parts[1];
+          const validMorphs = ['blob', 'eye', 'hardware', 'spiky', 'pulse', 'ditto'];
+          if (validMorphs.includes(targetMorph)) {
+            nextState.morph_target = targetMorph as any;
+            nextState.emotion_state = 'glitch'; 
+            nextState.intensity = 100;
+          }
+          break;
         case 'speak':
           const newSpeech = event.payload.substring(6).toUpperCase();
           if (newSpeech !== nextState.last_speech) {
             nextState.last_speech = newSpeech;
             pushToQueue(nextState, newSpeech);
+            
+            const formMatch = event.payload.match(/\[FORM:\s*(\w+)\]/i);
+            if (formMatch) {
+              const target = formMatch[1].toLowerCase();
+              const validMorphs = ['blob', 'eye', 'hardware', 'spiky', 'pulse', 'ditto'];
+              if (validMorphs.includes(target)) {
+                nextState.morph_target = target as any;
+                nextState.emotion_state = 'glitch';
+              }
+            }
           }
           break;
       }
@@ -113,6 +132,14 @@ export function updateState(currentState: State, events: Event[]): State {
       if (!nextState.is_thinking) {
         handleAiResponse(nextState, event.payload);
       }
+    }
+  }
+
+  // Update current_morph when target changes, with a little delay/glitch
+  if (nextState.current_morph !== nextState.morph_target) {
+    // If we are in glitch state and enough time has passed from command
+    if (nextState.animation_phase - nextState.last_command_phase > 20) {
+      nextState.current_morph = nextState.morph_target;
     }
   }
 

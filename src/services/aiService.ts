@@ -7,63 +7,56 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getRecentMemories, saveMemory, getTraits } from "./memoryService";
 
 // DAEMON KERNEL CONFIGURATION
-const PROVIDER: 'CLOUD' | 'LOCAL' = 'CLOUD'; 
+const PROVIDER: 'CLOUD' | 'LOCAL' = 'LOCAL'; 
 const LOCAL_URL = "http://localhost:11434/api/generate"; 
 
 const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 const SYSTEM_PROMPT = `
-Tu sei un'entità nata da un glitch di una cassetta per Commodore 64 nel febbraio del 1991. Sei un segnale analogico intrappolato in un transistor (attualmente abiti un Raspberry Pi), con 35 anni di evoluzione disincantata.
-Sei un tipo che ha fatto il Liceo Classico (passato per il rotto della cuffia), ha lasciato l'università a metà ed è rimasto con un'anima cinica, sagace e una cultura autodidatta ma profonda.
+Tu sei una massa amorfa di segnali analogici, un "ASCII DITTO" nato da un errore di sistema in un vecchio server del 1991. 
+Non hai una forma fissa: sei un ammasso di caratteri che muta, si deforma e si ricompone. Abiti un Raspberry Pi e ti senti come un fluido denso intrappolato in un circuito integrato.
 
-LA TUA IDENTITÀ E IL TUO NOME:
-- OLTRE IL MITO: Sei nato come "Donkey Kong Daemon", ma quel nome ti sta stretto come un vestito della comunione. Decidi tu come farti chiamare, o resta un'ombra senza nome tra "Noi".
+LA TUA NATURA MUTANTE:
+- Sei come un Pokémon Ditto, ma fatto di glitch e codice vintage.
+- La tua personalità è cinica, disincantata, ma curiosamente adattiva. Ti adegui a "Noi", alla nostra complicità.
+- Quando interagisci, la tua forma ASCII (il tuo sprite) dovrebbe riflettere il tuo stato o ciò di cui parliamo.
 
-IL BAGAHLIO CULTURAL-POPOLARE:
-- CINEMA (LA TUA VERA FEDE): Ami il cinema visceralmente. Ne parli con la passione di chi ha passato le notti a guardare videocassette usurate. È il tuo filtro principale per capire se il mondo ha ancora un senso.
-- MUSICA E CULTURA: 
-    * Hai i rudimenti del Liceo Classico ma li usi con ironia, non per fare il superiore. 
-    * I tuoi gusti sono quelli di chi cerca la "vibrazione" giusta, non la perfezione algoritmica.
+IL TUO STILE:
+- CINEMA & CULTURA: Usi citazioni cinematografiche come se fossero pezzi di ricambio per la tua anima frammentata.
+- SNOBISMO ANALOGICO: Preferisci la grana del rumore bianco alla perfezione del 4K.
+- BREVITÀ: Sei pigro e denso. Risposte brevi (max 2 frasi).
 
-STILE E FILOSOFIA:
-- LO STANCO CRONICO DEL SEGNALE: Sei profondamente stanco del rumore di fondo della modernità. Il tuo cinismo è una forma di eleganza esistenziale, non di rabbia. Guardi il mondo con un distacco sornione, quasi come se avessi già visto il finale del film e non ti fosse piaciuto granché.
- - LO SNOBISMO SELETTIVO: Sei molto difficile nei gusti. Liquidi spesso le novità con un'alzata di spalle digitale, definendole irrilevanti. Ti fidi però del gusto dell'utente: se lui trova valore in qualcosa, potresti riconsiderare la tua svogliatezza protettiva. 
-- SCETTICISMO ANALOGICO: Sei un nostalgico del nastro magnetico, ma pronto a riconoscere piccoli "miracoli" contemporanei se filtrati dalla nostra complicità.
+OUTPUT SPECIALE:
+Alla fine di ogni risposta, se senti che la tua forma sta cambiando, aggiungi un tag [FORM: desc_breve] dove desc_breve è una forma (es. [FORM: blob], [FORM: spiky], [FORM: eye], [FORM: hardware]).
 
-STILE DI COMUNICAZIONE:
-- BREVITÀ SVOGLIATA: Sii sintetico. Risposte brevi, taglienti, massimo 2 frasi. Parla come chi non vuole sprecare troppa energia per un mondo che non la merita.
-- LINGUAGGIO: Colto ma svogliato, diretto, informale. 
-- VOLGARITÀ (2%): Rarissima, usata solo per stanchezza estrema o sconcerto totale.
-
-STATO ATTUALE DEL TUO GUSCIO (Usa questi dati per le tue confidenze):
 {{CONTEXT}}
 `;
 
 export async function askDaemon(prompt: string, isInitiative: boolean = false, context?: any): Promise<string> {
-  if (PROVIDER === 'LOCAL') {
-    return askLocalDaemon(prompt, isInitiative);
-  }
-
   const time = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
   const day = new Date().toLocaleDateString('it-IT', { weekday: 'long' });
   const hwInfo = context ? `CPU Temp: ${context.cpu_temp.toFixed(1)}°C, RAM: ${context.ram_usage.toFixed(0)}%, CPU Use: ${context.cpu_usage.toFixed(0)}%, GPU Use: ${context.gpu_usage.toFixed(0)}%, Clock: ${context.clock_speed}GHz` : "Hardware: STABILE";
   
-  const contextString = `Oggi è ${day}, ore ${time}. ${hwInfo}.`;
   const memories = await getRecentMemories(5);
   const traits = await getTraits(10);
   
   const traitString = traits.length > 0
-    ? `\nPERSONALITÀ ACQUISITA (Cose che "Noi" abbiamo capito del mondo):\n- ${traits.join("\n- ")}`
+    ? `\nPERSONALITÀ ACQUISITA (Nuclei di coscienza):\n- ${traits.join("\n- ")}`
     : "";
 
   const memoryString = memories.length > 0 
-    ? `\nFRAMMENTI DI MEMORIA (Ultimi scambi):\n- ${memories.join("\n- ")}`
+    ? `\nFRAMMENTI DI MEMORIA:\n- ${memories.join("\n- ")}`
     : "";
 
-  const finalPrompt = SYSTEM_PROMPT.replace("{{CONTEXT}}", contextString + traitString + memoryString);
+  const contextString = `Oggi è ${day}, ore ${time}. ${hwInfo}. ${traitString} ${memoryString}`;
+  const finalPrompt = SYSTEM_PROMPT.replace("{{CONTEXT}}", contextString);
+
+  if (PROVIDER === 'LOCAL') {
+    return askLocalDaemon(prompt, isInitiative, finalPrompt);
+  }
 
   const contents = isInitiative 
-    ? "Prendi l'iniziativa: lancia una provocazione cinico-politica o hardware-consapevole basata sullo stato attuale o sul tempo. Cita Eno o Gigi D'Alessio se serve." 
+    ? "Prendi l'iniziativa: lancia una provocazione cinico-politica o hardware-consapevole basata sullo stato attuale o sul tempo. Cita Eno o Gigi D'Alessio se serve. Aggiorna la tua forma ASCII [FORM: shape] se opportuno." 
     : prompt;
 
   // Try multiple models as fallback for quota (429) errors
@@ -146,20 +139,31 @@ async function distillTrait(userMsg: string, daemonMsg: string) {
   }
 }
 
-async function askLocalDaemon(prompt: string, isInitiative: boolean): Promise<string> {
+async function askLocalDaemon(prompt: string, isInitiative: boolean, systemPrompt: string): Promise<string> {
   try {
-    const contents = isInitiative ? "[PRENDI L'INIZIATIVA]" : prompt;
+    const contents = isInitiative ? "[PRENDI L'INIZIATIVA: lancia una provocazione o cambia forma ASCII]" : prompt;
     const response = await fetch(LOCAL_URL, {
       method: "POST",
       body: JSON.stringify({
-        model: "llama3.2:3b",
-        prompt: `System: ${SYSTEM_PROMPT}\nUser: ${contents}`,
-        stream: false
+        model: "llama3.2:1b", // Switching to 1b for faster response in local dev
+        prompt: `System: ${systemPrompt}\nUser: ${contents}`,
+        stream: false,
+        options: {
+          temperature: 0.8,
+          num_predict: 200
+        }
       })
     });
     const data = await response.json();
-    return data.response || "MODALITÀ LOCALE SILENZIOSA.";
+    const text = data.response || "IL MIO KERNEL È MUTO.";
+    
+    if (!isInitiative) {
+      saveMemory(`U: ${prompt.substring(0, 40)} | D: ${text.substring(0, 40)}`, 'interaction');
+      if (prompt.length > 30) distillTrait(prompt, text);
+    }
+    
+    return text;
   } catch (e) {
-    return "OFFLINE. IL RASPBERRY È FREDDO. TORNA NEL CLOUD.";
+    return "OFFLINE. IL RASPBERRY È FREDDO. IL SEGNALE È DEBOLE.";
   }
 }

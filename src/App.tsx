@@ -11,27 +11,29 @@ import { askDaemon } from './services/aiService';
 import { auth, signIn, signOut } from './services/memoryService';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
+import { imageToAscii } from './utils/imageUtils';
+
 export default function App() {
   const [frame, setFrame] = useState('');
   const [state, setState] = useState<State>(INITIAL_STATE);
   const [input, setInput] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const resetIdleTimer = () => {
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-    // Add jitter to the timer (between 2 and 5 minutes)
     const randomInterval = 120000 + Math.random() * 180000;
     
     idleTimerRef.current = setTimeout(async () => {
       if (!isAiLoading) {
         setIsAiLoading(true);
-        const response = await askDaemon("", true); // Trigger initiative
+        const response = await askDaemon("", true); 
         socketRef.current?.emit('command', `speak ${response}`);
         setIsAiLoading(false);
-        resetIdleTimer(); // Re-arm
+        resetIdleTimer();
       }
     }, randomInterval);
   };
@@ -41,7 +43,6 @@ export default function App() {
       setUser(u);
     });
 
-    // Connect to the same host
     const socket = io();
     socketRef.current = socket;
 
@@ -59,32 +60,53 @@ export default function App() {
     };
   }, []);
 
+  const handleFileUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    
+    setIsAiLoading(true);
+    try {
+      const ascii = await imageToAscii(file, 25);
+      const prompt = `Ho scansionato questo oggetto biomemore: \n${ascii}\nCosa ne pensi? Cambia forma se serve per esaminarlo.`;
+      const aiResponse = await askDaemon(prompt);
+      socketRef.current?.emit('command', `speak ${aiResponse}`);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileUpload(e.dataTransfer.files[0]);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanInput = input.trim().toLowerCase();
     if (!cleanInput || !socketRef.current || isAiLoading) return;
 
-    resetIdleTimer(); // Reset on activity
+    resetIdleTimer();
 
-    // List of direct system commands
-    const systemCommands = ['calm', 'attack', 'alert', 'glitch', 'stream on', 'stream off'];
+    const systemCommands = ['calm', 'attack', 'alert', 'glitch', 'stream on', 'stream off', 'morph'];
     const isSystemCmd = systemCommands.some(cmd => cleanInput.startsWith(cmd));
 
     if (isSystemCmd) {
-      // Send directly to the socket system
       socketRef.current.emit('command', cleanInput);
     } else {
-      // It's a conversation: ask the AI
       setIsAiLoading(true);
       const aiResponse = await askDaemon(cleanInput);
       setIsAiLoading(false);
-      
-      // Update speech via socket special command 'speak'
       socketRef.current.emit('command', `speak ${aiResponse}`);
     }
 
     setInput('');
   };
+
+  // ... (rest of theme and UI logic)
 
   // Adaptive Color Logic
   const getTerminalTheme = () => {
@@ -123,7 +145,12 @@ export default function App() {
   const isTupacInput = input.toLowerCase().includes('tupac');
 
   return (
-    <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-4 font-mono selection:bg-[#00FF00] selection:text-black relative overflow-hidden transition-colors duration-500">
+    <div 
+      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+      onDragLeave={() => setIsDragging(false)}
+      onDrop={handleDrop}
+      className={`min-h-screen bg-[#050505] flex flex-col items-center justify-center p-4 font-mono selection:bg-[#00FF00] selection:text-black relative overflow-hidden transition-colors duration-500 ${isDragging ? 'ring-2 ring-[#00FF00] ring-inset' : ''}`}
+    >
       {/* Subtle CRT Overlays */}
       <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%]" />
       <div className="fixed inset-0 pointer-events-none z-40 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,0,0.02)_0%,transparent_80%)]" />
