@@ -8,7 +8,8 @@ import { getRecentMemories, saveMemory, getTraits } from "./memoryService";
 
 // DAEMON KERNEL CONFIGURATION
 const PROVIDER: 'CLOUD' | 'LOCAL' = 'LOCAL'; 
-const LOCAL_URL = "http://localhost:11434/api/generate"; 
+const LOCAL_GENERATE_URL = "http://localhost:11434/api/generate";
+const LOCAL_CHAT_URL = "http://localhost:11434/api/chat"; 
 
 const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -148,11 +149,14 @@ async function distillTrait(userMsg: string, daemonMsg: string) {
 async function askLocalDaemon(prompt: string, isInitiative: boolean, systemPrompt: string): Promise<string> {
   try {
     const contents = isInitiative ? "[PRENDI L'INIZIATIVA: lancia una provocazione o cambia forma ASCII]" : prompt;
-    const response = await fetch(LOCAL_URL, {
+    const response = await fetch(LOCAL_CHAT_URL, {
       method: "POST",
       body: JSON.stringify({
         model: "tinyllama", 
-        prompt: `System: ${systemPrompt}\nUser: ${contents}`,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: contents }
+        ],
         stream: false,
         options: {
           temperature: 0.8,
@@ -161,7 +165,7 @@ async function askLocalDaemon(prompt: string, isInitiative: boolean, systemPromp
       })
     });
     const data = await response.json();
-    const text = data.response || "IL MIO KERNEL È MUTO.";
+    const text = data.message?.content || data.response || "IL MIO KERNEL È MUTO.";
     
     if (!isInitiative) {
       saveMemory(`U: ${prompt.substring(0, 40)} | D: ${text.substring(0, 40)}`, 'interaction');
