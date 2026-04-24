@@ -22,6 +22,7 @@ export default function App() {
   const [isDragging, setIsDragging] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetIdleTimer = () => {
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
@@ -111,7 +112,16 @@ export default function App() {
     }
   };
 
-  const handleFileUpload = async (file: File) => {
+  const handleFileUpload = async (fileOrEvent: File | React.ChangeEvent<HTMLInputElement>) => {
+    let file: File | undefined;
+    if ('target' in fileOrEvent) {
+      file = fileOrEvent.target.files?.[0];
+    } else {
+      file = fileOrEvent;
+    }
+
+    if (!file || isAiLoading) return;
+
     setIsAiLoading(true);
     try {
       if (file.type.startsWith('image/')) {
@@ -121,7 +131,8 @@ export default function App() {
         processDaemonResponse(aiResponse);
       } else {
         const text = await file.text();
-        const prompt = `Ho trovato questo frammento dati intitolato "${file.name}":\n\n${text.substring(0, 1500)}${text.length > 1500 ? '...' : ''}\n\nAnalizzalo. Se vuoi restituirmi una versione elaborata o un file di sistema, usa il formato [FILE:nome]...[/FILE].`;
+        const prompt = `Ho trovato questo frammento dati intitolato "${file.name}":\n\n${text.substring(0, 2000)}${text.length > 2000 ? '...' : ''}\n\nAnalizzalo. Se vuoi restituirmi una versione elaborata o un file di sistema, usa il formato [FILE:nome]...[/FILE].`;
+        socketRef.current?.emit('command', `input [UPLOAD_FILE:${file.name}]`);
         const aiResponse = await askDaemon(prompt);
         processDaemonResponse(aiResponse);
       }
@@ -129,6 +140,7 @@ export default function App() {
       console.error(e);
     } finally {
       setIsAiLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -257,17 +269,37 @@ export default function App() {
           </pre>
 
           {/* Terminal Input */}
-          <form onSubmit={handleSubmit} className="mt-8 w-full flex items-center gap-2 border-t border-white/20 pt-4 opacity-80 hover:opacity-100 focus-within:opacity-100 transition-all duration-300">
-            <input 
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              disabled={isAiLoading}
-              className={`${themeClass} flex-1 bg-transparent border-none outline-none text-[12px] uppercase font-bold placeholder-[#ffffff33] tracking-widest ${isAiLoading ? 'opacity-20 animate-pulse' : ''} ${isMaterialistInput ? 'animate-[bounce_0.5s_infinite]' : ''} ${isTupacInput ? 'blur-[0.5px] drop-shadow-[0_0_2px_rgba(255,255,255,0.5)]' : ''}`}
-              placeholder={isAiLoading ? "PROCESSING_ERR..." : "SEND CMD TO GLITCH..."}
-              autoFocus
+          <div className="mt-8 w-full flex items-center gap-4 border-t border-white/20 pt-4 opacity-80 hover:opacity-100 focus-within:opacity-100 transition-all duration-300">
+            <form onSubmit={handleSubmit} className="flex-1 flex items-center gap-2">
+              <input 
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                disabled={isAiLoading}
+                className={`${themeClass} flex-1 bg-transparent border-none outline-none text-[12px] uppercase font-bold placeholder-[#ffffff33] tracking-widest ${isAiLoading ? 'opacity-20 animate-pulse' : ''} ${isMaterialistInput ? 'animate-[bounce_0.5s_infinite]' : ''} ${isTupacInput ? 'blur-[0.5px] drop-shadow-[0_0_2px_rgba(255,255,255,0.5)]' : ''}`}
+                placeholder={isAiLoading ? "PROCESSING_ERR..." : "SEND CMD TO GLITCH..."}
+                autoFocus
+              />
+            </form>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              className="hidden"
             />
-          </form>
+            
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isAiLoading}
+              className="text-white/20 hover:text-[#00FF00] transition-colors p-1"
+              title="Upload data cluster (file)"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
