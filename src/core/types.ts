@@ -32,7 +32,6 @@ export interface State {
   context_memory: string[]; // Recent news patterns
   is_thinking: boolean; // Prevenzione chiamate multiple
   custom_sprite?: string; // DNA visivo dinamico
-  form: 'blob' | 'eye' | 'hardware' | 'ditto' | 'spiky';
   debug_mode: boolean;
   debug_logs: string[];
 }
@@ -57,7 +56,6 @@ export const INITIAL_STATE: State = {
   },
   context_memory: [],
   is_thinking: false,
-  form: 'hardware',
   debug_mode: false,
   debug_logs: []
 };

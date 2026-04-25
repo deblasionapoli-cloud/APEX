@@ -85,20 +85,11 @@ export default function App() {
   }, []); // Remove isRemoteMode dependency to keep socket stable
 
   const processDaemonResponse = (response: string) => {
-    // 1. Process Actions (Morph, State, Intensity)
-    const morphMatch = response.match(/\[FORM:\s*([^\]]+)\]/i);
-    if (morphMatch) {
-      const morphName = morphMatch[1].trim().toLowerCase();
-      const validMorphs = ['blob', 'eye', 'hardware', 'ditto', 'spiky'];
-      if (validMorphs.includes(morphName)) {
-        socketRef.current?.emit('command', `morph ${morphName}`);
-      }
-    }
-
+    // 1. Process Actions (State, Intensity)
     const stateMatch = response.match(/\[STATE:\s*([^\]]+)\]/i);
     if (stateMatch) {
       const stateName = stateMatch[1].trim().toLowerCase();
-      const validStates = ['glitch', 'attack', 'alert', 'calm'];
+      const validStates = ['attack', 'alert', 'calm', 'curious', 'sad'];
       if (validStates.includes(stateName)) {
         socketRef.current?.emit('command', stateName);
       }
@@ -134,7 +125,6 @@ export default function App() {
     // 3. Clean and Speak: Remove only known system tags
     const cleanResponse = response
       .replace(/\[FILE:\s*[^\]]+\][\s\S]*?\[\/FILE\]/gi, '')
-      .replace(/\[FORM:\s*[^\]]+\]/gi, '')
       .replace(/\[STATE:\s*[^\]]+\]/gi, '')
       .replace(/\[INTENSITY:\s*[^\]]+\]/gi, '')
       .replace(/\s+/g, ' ')
@@ -163,8 +153,8 @@ export default function App() {
       socketRef.current.emit('command', 'attack');
       return;
     }
-    if (lowerInput.match(/\b(impazzisci|errore|glitch|bug|crash)\b/)) {
-      socketRef.current.emit('command', 'glitch');
+    if (lowerInput.match(/\b(impazzisci|errore|bug|crash)\b/)) {
+      socketRef.current.emit('command', 'sad');
       return;
     }
     if (lowerInput.match(/\b(attenzione|avviso|alert|occhio|vigile)\b/)) {
@@ -180,17 +170,6 @@ export default function App() {
     if (lowerInput.includes('stream off') || lowerInput.includes('disattiva stream')) {
       socketRef.current.emit('command', 'stream off');
       return;
-    }
-
-    // Morph control
-    const morphMatch = lowerInput.match(/\b(cambia forma in|trasformati in|morph|forma)\s+(\w+)\b/);
-    if (morphMatch) {
-      const morphName = morphMatch[2];
-      const validMorphs = ['blob', 'eye', 'hardware', 'ditto', 'spiky'];
-      if (validMorphs.includes(morphName)) {
-        socketRef.current.emit('command', `morph ${morphName}`);
-        return;
-      }
     }
 
     // Fallback to AI for complex commands
@@ -214,7 +193,7 @@ export default function App() {
     try {
       if (file.type.startsWith('image/')) {
         const ascii = await imageToAscii(file, 25);
-        const prompt = `Ho scansionato questo oggetto visivo: \n${ascii}\nCosa ne pensi? Cambia forma se serve.`;
+        const prompt = `Ho scansionato questo oggetto visivo: \n${ascii}\nCosa ne pensi?`;
         const aiResponse = await askDaemon(prompt);
         processDaemonResponse(aiResponse);
       } else {

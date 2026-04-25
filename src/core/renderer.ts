@@ -12,7 +12,7 @@ export function renderFrame(state: State): string {
   if (!state) {
     return "ERROR: STATE_UNDEFINED\n[ SYSTEM_HALTED ]";
   }
-  const { emotion_state, animation_phase, intensity, form } = state;
+  const { emotion_state, animation_phase, intensity } = state;
   const isGlitched = emotion_state === 'glitch';
 
   // 1. Procedural Background Layer (Optimized)
@@ -67,10 +67,6 @@ export function renderFrame(state: State): string {
   let hatLogo = "[C]";
   let hatTop = "      .-----------------.      ";
   let hatMid = "     /      _______      \\     ";
-  if (form === 'blob') { hatLogo = "(B)"; hatTop = "      ._________________.      "; hatMid = "     (      _______      )     "; }
-  else if (form === 'eye') { hatLogo = "(E)"; hatTop = "      .________O________.      "; }
-  else if (form === 'ditto') { hatLogo = " . "; hatTop = "      .                 .      "; }
-  else if (form === 'spiky') { hatLogo = "[W]"; hatTop = "      .vvvvvvvvvvvvvvvvv.      "; }
 
   let brow = "  ._________________.  ";
   if (emotion_state === 'alert' || emotion_state === 'attack' || emotion_state === 'angry') brow = "  .^^^^^^^^^^^^^^^^^.  ";

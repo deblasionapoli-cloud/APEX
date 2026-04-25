@@ -140,7 +140,7 @@ export function updateState(currentState: State, events: Event[]): State {
         nextState.emotion_state = 'bored';
         nextState.intensity -= 10;
       } else if (input.includes('who') || input.includes('identity')) {
-        nextState.emotion_state = 'glitch';
+        nextState.emotion_state = 'curious';
         nextState.intensity += 5;
       } else if (input.includes('relax') || input.includes('peace') || input.includes('safe')) {
         nextState.emotion_state = 'calm';
@@ -257,21 +257,12 @@ function processSpeechTags(state: State, rawSpeech: string) {
   const asciiMatch = rawSpeech.match(/\[ASCII\]([\s\S]*?)(?:\[\/ASCII\]|$)/i);
   if (asciiMatch && asciiMatch[1].trim()) {
     state.custom_sprite = asciiMatch[1].trim();
-    state.emotion_state = 'glitch';
-  }
-
-  // Parse Physical tags directly (Enables tags via SSH/Remote)
-  const formMatch = rawSpeech.match(/\[FORM:\s*([^\]]+)\]/i);
-  if (formMatch) {
-    const fn = formMatch[1].trim().toLowerCase();
-    const valid = ['blob', 'eye', 'hardware', 'ditto', 'spiky'];
-    if (valid.includes(fn)) state.form = fn as any;
   }
 
   const stateMatch = rawSpeech.match(/\[STATE:\s*([^\]]+)\]/i);
   if (stateMatch) {
     const sn = stateMatch[1].trim().toLowerCase();
-    const valid = ['glitch', 'attack', 'alert', 'calm'];
+    const valid = ['attack', 'alert', 'calm', 'curious', 'sad'];
     if (valid.includes(sn)) state.emotion_state = sn as any;
   }
 
@@ -285,7 +276,6 @@ function processSpeechTags(state: State, rawSpeech: string) {
   const displaySpeech = rawSpeech
     .replace(/\[ASCII\]([\s\S]*?)(?:\[\/ASCII\]|$)/gi, '')
     .replace(/\[FILE:\s*[^\]\s]+\]([\s\S]*?)(?:\[\/FILE\]|$)/gi, '')
-    .replace(/\[FORM:\s*[^\]]+\]/gi, '')
     .replace(/\[STATE:\s*[^\]]+\]/gi, '')
     .replace(/\[INTENSITY:\s*[^\]]+\]/gi, '')
     .replace(/\s+/g, ' ')
