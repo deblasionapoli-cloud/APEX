@@ -18,7 +18,7 @@ export function renderFrame(state: State): string {
 
   // 1. Procedural Background Layer (Data Stream)
   const bgWidth = 72;
-  const bgHeight = 30; // Increased height significantly for better readability
+  const bgHeight = 26; // Reduced to fit screen better
   const generateBGLine = (phase: number, row: number) => {
     const seed = (phase + row * 17) % 100;
     const chars = [" ", " ", " ", " ", ".", "·", "'", "`", " ", " "];
@@ -184,7 +184,7 @@ export function renderFrame(state: State): string {
   if (curL) lines.push(curL);
 
   // Buffer management: determine which window of lines to show
-  const maxHudLines = 7; // More lines for better visibility
+  const maxHudLines = 5; // Reduced for better viewport fit
   let hudLinesRendered: string[] = [];
   
   // Create cumulative character count per line to find cursor position
@@ -203,7 +203,7 @@ export function renderFrame(state: State): string {
   }
 
   // Windowing: follow the typingLineIdx, keeping it towards the bottom
-  const startIdx = Math.max(0, typingLineIdx - (maxHudLines - 2));
+  const startIdx = Math.max(0, typingLineIdx - (maxHudLines - 1));
   const windowLines = lines.slice(startIdx, startIdx + maxHudLines);
   
   windowLines.forEach((line, i) => {
