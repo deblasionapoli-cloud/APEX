@@ -452,15 +452,15 @@ export default function App() {
               {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={18} />}
             </button>
  
-            <pre 
-              className={`${themeClass} text-[3.2vh] md:text-[3.5vh] leading-[1.0] tracking-tighter whitespace-pre flex flex-col items-center justify-center select-none transition-all duration-200 overflow-hidden font-mono w-full h-full flex-1`}
-            >
-              {frame.split('\n').map((line, i) => (
-                <div key={i} className="flex justify-center w-full">
-                  <span className="w-full text-center block" style={{ transform: 'scale(1.0, 1.0)', transformOrigin: 'center' }}>{line}</span>
-                </div>
-              ))}
-            </pre>
+          <pre 
+            className={`${themeClass} text-[2.8vh] md:text-[3.2vh] leading-none tracking-tighter flex flex-col items-center justify-center select-none transition-all duration-200 overflow-hidden font-mono w-full h-full flex-1`}
+          >
+            {frame.split('\n').map((line, i) => (
+              <div key={i} className="flex justify-center w-full overflow-visible py-[0.1vh]">
+                <span className="whitespace-pre inline-block" style={{ transform: 'scale(1.5, 1.25)', transformOrigin: 'center' }}>{line}</span>
+              </div>
+            ))}
+          </pre>
           </div>
         </div>
 

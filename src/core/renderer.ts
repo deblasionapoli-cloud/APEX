@@ -24,6 +24,11 @@ export function renderFrame(state: State): string {
     const chars = [" ", " ", " ", " ", ".", "·", "'", "`", " ", " "];
     let line = "";
     for (let i = 0; i < bgWidth; i++) {
+       // Clear edges to prevent 'vertical lines' on frame borders
+       if (i < 2 || i > bgWidth - 3) {
+         line += " ";
+         continue;
+       }
        const charIdx = (seed + i * 7) % chars.length;
        line += chars[charIdx];
     }
@@ -78,14 +83,15 @@ export function renderFrame(state: State): string {
 
   const breathOffset = Math.floor(Math.sin(animation_phase * 0.15) * 1.2);
   const floatOffset = Math.floor(Math.cos(animation_phase * 0.05) * 0.8);
-  const totalYShift = breathOffset + floatOffset - 4;
+  const totalYShift = breathOffset + floatOffset - 2;
 
-  let brow = "  .___________________.  ";
-  if (emotion_state === 'alert' || emotion_state === 'attack' || emotion_state === 'angry') brow = "  .^^^^^^^^^^^^^^^^^^^.  ";
-  if (emotion_state === 'curious') brow = "  .____/________/_____.  ";
-  if (emotion_state === 'surprised') brow = "  .  /             \\  .  ";
-  if (emotion_state === 'happy') brow = "  .   \\           /   .  ";
-  if (emotion_state === 'sad') brow = "  .   /           \\   .  ";
+  // Face Internal Width = 21 chars. Face total width (with pipes) = 23 chars. Total Line Width = 31 chars.
+  let brow = "  ._________________.  ";
+  if (emotion_state === 'alert' || emotion_state === 'attack' || emotion_state === 'angry') brow = "  .^^^^^^^^^^^^^^^^^.  ";
+  if (emotion_state === 'curious') brow = "  .____/_______/____.  ";
+  if (emotion_state === 'surprised') brow = "  .  /           \\  .  ";
+  if (emotion_state === 'happy') brow = "  .   \\         /   .  ";
+  if (emotion_state === 'sad') brow = "  .   /         \\   .  ";
 
   let mouth = "|    {===========}    |";
   if (isSpeaking) {
@@ -100,7 +106,7 @@ export function renderFrame(state: State): string {
   }
 
   let nose = "|          ^          |";
-  if (isProcessing && animation_phase % 2 === 0) nose = "|         (<*>)        |";
+  if (isProcessing && animation_phase % 2 === 0) nose = "|         (<*>)       |";
 
   spriteLines = [
     "      .-----------------.      ",
@@ -110,41 +116,52 @@ export function renderFrame(state: State): string {
     "    |      |_______|      |    ",
     "    |_____________________|    ",
     "    |=====================|    ",
-    brow,
-    `    |    (${eyeL})   (${eyeR})    |`,
-    `    ${nose}`,
-    `    ${mouth}`,
-    "    '___________________'  "
+    `    |${brow}|    `,
+    `    |    (${eyeL})   (${eyeR})    |    `,
+    `    ${nose}    `,
+    `    ${mouth}    `,
+    "    '_____________________'    "
   ];
 
-  // Horizontal scaling
+  // Normalize all sprite lines to exactly 33 characters for consistent scaling
+  spriteLines = spriteLines.map(line => {
+    const targetWidth = 33;
+    const currentLen = line.length;
+    if (currentLen < targetWidth) {
+      const diff = targetWidth - currentLen;
+      const leftPad = Math.floor(diff / 2);
+      const rightPad = diff - leftPad;
+      return " ".repeat(leftPad) + line + " ".repeat(rightPad);
+    } else if (currentLen > targetWidth) {
+      return line.substring(0, targetWidth);
+    }
+    return line;
+  });
+
+  // Simple 2x horizontal scaling by doubling characters
   spriteLines = spriteLines.map(line => {
     let scaled = "";
     for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        scaled += char;
-        if (char !== 'C') {
-            scaled += char;
-            if (i % 5 === 0) scaled += char;
-        }
+        scaled += line[i] + line[i];
     }
     return scaled;
   });
 
+  // 2x Vertical scaling
+  const verticallyScaled: string[] = [];
+  for (const line of spriteLines) {
+    verticallyScaled.push(line);
+    verticallyScaled.push(line);
+  }
+  spriteLines = verticallyScaled;
+
   const horizontalSway = Math.floor(Math.sin(animation_phase * 0.08) * 2);
   if (horizontalSway !== 0) {
     spriteLines = spriteLines.map(line => {
-      const pad = " ".repeat(Math.abs(horizontalSway));
-      return horizontalSway > 0 ? pad + line : line + pad;
+      const p = " ".repeat(Math.abs(horizontalSway));
+      return horizontalSway > 0 ? p + line : line + p;
     });
   }
-
-  const verticallyScaled: string[] = [];
-  for (let i = 0; i < spriteLines.length; i++) {
-    verticallyScaled.push(spriteLines[i]);
-    if (i % 3 === 2) verticallyScaled.push(spriteLines[i]);
-  }
-  spriteLines = verticallyScaled;
 
   const entropy = state.intensity / 100;
   if (emotion_state === 'glitch' || Math.random() < (entropy * 0.15)) {
@@ -254,7 +271,7 @@ export function renderFrame(state: State): string {
     }
 
     // 2. Overlay HUD (Bottom Interaction)
-    const hudRowStart = bgHeight - (hudLines.length + 1) - 4;
+    const hudRowStart = bgHeight - (hudLines.length + 1) - 1;
     const hudIdx = idx - hudRowStart;
     if (hudIdx >= 0 && hudIdx < hudLines.length) {
         const hudLine = hudLines[hudIdx];
@@ -279,7 +296,11 @@ export function renderFrame(state: State): string {
     if (isGlitched || iScale > 0.6) {
       if (Math.random() < (isGlitched ? 0.3 : 0.1)) {
         const offset = (Math.floor(Math.random() * 4) - 2);
-        currentLine = offset > 0 ? " ".repeat(offset) + currentLine : currentLine.substring(Math.abs(offset));
+        if (offset > 0) {
+          currentLine = " ".repeat(offset) + currentLine.substring(0, bgWidth - offset);
+        } else if (offset < 0) {
+          currentLine = currentLine.substring(Math.abs(offset)).padEnd(bgWidth, " ");
+        }
       }
     }
 
