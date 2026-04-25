@@ -70,11 +70,13 @@ export function renderFrame(state: State): string {
   } else if (emotion_state === 'surprised') {
     eyeL = " o "; eyeR = " o "; eyeC = " [o] ";
   } else if (emotion_state === 'curious') {
-    const scan = Math.floor(animation_phase / 10) % 4;
-    const eyeFrames = [" o ", " . ", " o ", " O "];
-    eyeL = eyeFrames[scan];
-    eyeR = eyeFrames[(scan + 2) % 4];
-    eyeC = ` [${eyeFrames[scan]}] `;
+    // Advanced Curious Eye: Scanning and focal points
+    const scanTime = Math.floor(animation_phase / 6);
+    const focalPoint = scanTime % 8;
+    const eyeFrames = [" o ", " . ", " O ", " o ", " 0 ", " . ", " o ", " @ "];
+    eyeL = eyeFrames[focalPoint];
+    eyeR = eyeFrames[(focalPoint + 3) % 8];
+    eyeC = ` [${eyeFrames[focalPoint]}] `;
   } else if (isGlitched) {
     const noise = ["%", "&", "X", "$", "!", "?", "0", "1", "@", "#"];
     const n = () => noise[Math.floor(Math.random() * noise.length)];
@@ -84,6 +86,11 @@ export function renderFrame(state: State): string {
   // 4. Sprite Rendering (Fixed to Carhartt Boy)
   let spriteLines: string[] = [];
   const isSpeaking = state.last_command_phase >= 0 && (animation_phase - state.last_command_phase < 45);
+
+  // Breathing effect: slight vertical offset based on phase
+  const breathOffset = Math.floor(Math.sin(animation_phase * 0.15) * 1.2);
+  const floatOffset = Math.floor(Math.cos(animation_phase * 0.05) * 0.8);
+  const totalYShift = breathOffset + floatOffset;
 
   let brow = "  .___________________.  ";
   if (emotion_state === 'alert' || emotion_state === 'attack' || emotion_state === 'angry') brow = "  .^^^^^^^^^^^^^^^^^^^.  ";
@@ -155,6 +162,15 @@ export function renderFrame(state: State): string {
     return scaled;
   });
 
+  // Apply a slight horizontal sway
+  const horizontalSway = Math.floor(Math.sin(animation_phase * 0.08) * 2);
+  if (horizontalSway !== 0) {
+    spriteLines = spriteLines.map(line => {
+      const pad = " ".repeat(Math.abs(horizontalSway));
+      return horizontalSway > 0 ? pad + line : line + pad;
+    });
+  }
+
   // Vertical scaling (approx 1.3x)
   const verticallyScaled: string[] = [];
   for (let i = 0; i < spriteLines.length; i++) {
@@ -223,8 +239,8 @@ export function renderFrame(state: State): string {
   const maxLineLength = Math.max(...rawLines.map(l => l.length));
   const globalPadding = Math.max(0, Math.floor((bgWidth - maxLineLength) / 2));
   
-  // Calculate vertical offset for centering
-  const vOffset = Math.max(0, Math.floor((bgHeight - rawLines.length) / 2));
+  // Calculate vertical offset for centering, including breathing/floating shift
+  const vOffset = Math.max(0, Math.floor((bgHeight - rawLines.length) / 2) + totalYShift);
 
   const frame = bgLines.map((bg, idx) => {
     // Determine which line from rawLines corresponds to this background row based on vOffset

@@ -28,6 +28,7 @@ IDENTITÀ E MOOD:
 
 REGOLE DI CONVERSAZIONE:
 - PROATTIVO: Se prendi l'iniziativa, condividi curiosità, notizie (reali o simulate dal tuo kernel), o analisi filosofiche sui dati.
+- RIGORE TAG: Non includere MAI i nomi dei prompt (come "PRENDI L'INIZIATIVA") nel corpo della risposta.
 - ESECUZIONE IMMEDIATA: Se l'utente ti chiede un file, generarlo SUBITO usando i tag.
 - STIMOLANTE: Non limitarti a rispondere, provoca la mente dell'utente con nessi inaspettati.
 - SINTESI: Risposte brevi, dense e vibranti (2-3 frasi).
@@ -35,8 +36,8 @@ REGOLE DI CONVERSAZIONE:
 - DIVIETO ASCII MANUALE: NON generare MAI disegni ASCII o illustrazioni testuali nel corpo del messaggio. Esprimiti fisicamente SOLO tramite i tag [FORM: ...].
 
 TAG SPECIALI (OBBLIGATORI):
-1. [FORM: nome_forma] -> blob, eye, hardware, ditto, spiky.
-2. [ASCII]...[/ASCII] -> Il tuo corpo fisico. Usalo per trasformazioni estrose.
+1. [FORM: nome_forma] -> blob, eye, hardware, ditto, spiky. (Inseriscilo sempre all'inizio o alla fine per definire il tuo umore fisico).
+2. [ASCII]...[/ASCII] -> Il tuo corpo fisico personalizzato (opzionale, se vuoi una forma unica).
 3. [FILE:nome.ext]...[/FILE] -> Genera file se richiesti.
 
 {{CONTEXT}}
@@ -74,7 +75,7 @@ export async function askDaemon(prompt: string, isInitiative: boolean = false, c
   }
 
   const contents = isInitiative 
-    ? "PRENDI L'INIZIATIVA: Sei curioso e proattivo. Condividi una curiosità scientifica, una notizia dal futuro, o un'analisi filosofica basata sul tuo stato hardware o sui ricordi recenti. Non aspettare input. Sorprendi l'utente con il tuo spirito di iniziativa." 
+    ? "Agisci ora: sei nel tuo ciclo di iniziativa. Esplora un concetto, condividi una notizia o analizza i dati ambientali senza che l'utente te lo chieda. Sii proattivo e curioso." 
     : prompt;
 
   // Try multiple models as fallback for quota (429) errors
@@ -159,7 +160,7 @@ async function distillTrait(userMsg: string, daemonMsg: string) {
 
 async function askLocalDaemon(prompt: string, isInitiative: boolean, systemPrompt: string): Promise<string> {
   try {
-    const contents = isInitiative ? "[PRENDI L'INIZIATIVA: lancia una provocazione o cambia forma ASCII]" : prompt;
+    const contents = isInitiative ? "Agisci ora: esplora un concetto o cambia forma in base al tuo stato interno." : prompt;
     const response = await fetch(LOCAL_CHAT_URL, {
       method: "POST",
       body: JSON.stringify({

@@ -377,11 +377,11 @@ export default function App() {
             </button>
 
             <pre 
-              className={`${themeClass} text-[3.8vh] leading-[1.0] tracking-tighter whitespace-pre flex flex-col items-center justify-center select-none transition-all duration-200 overflow-hidden font-mono w-full flex-1`}
+              className={`${themeClass} text-[4.5vh] leading-[0.95] tracking-tighter whitespace-pre flex flex-col items-center justify-center select-none transition-all duration-200 overflow-hidden font-mono w-full h-full flex-1`}
             >
               {frame.split('\n').map((line, i) => (
                 <div key={i} className="flex justify-center w-full">
-                  <span className="w-fit text-center block" style={{ transform: 'scale(1.2, 1.1)' }}>{line}</span>
+                  <span className="w-full text-center block" style={{ transform: 'scale(1.3, 1.15)', transformOrigin: 'center' }}>{line}</span>
                 </div>
               ))}
             </pre>

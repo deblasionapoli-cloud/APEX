@@ -240,6 +240,9 @@ function processSpeechTags(state: State, rawSpeech: string) {
   const displaySpeech = rawSpeech
     .replace(/\[ASCII\]([\s\S]*?)(?:\[\/ASCII\]|$)/gi, '')
     .replace(/\[FILE:\s*[^\]\s]+\]([\s\S]*?)(?:\[\/FILE\]|$)/gi, '')
+    .replace(/\[FORM:\s*[^\]]+\]/gi, '') // Strip FORM tags
+    .replace(/\[.*?\]/gi, '') // Strip any other square bracket tags/residue
+    .replace(/Agisci\s+ora:?.*?(\.|$)/gi, '') // Strip residue of the initiative prompt if echoed as text
     .trim()
     .toUpperCase();
 
@@ -268,6 +271,8 @@ async function handleAiResponse(state: State, input: string) {
 async function handleInitiative(state: State) {
   if (state.is_thinking) return;
   state.is_thinking = true;
+  state.emotion_state = 'curious'; // Reflect proactive behavior
+  state.intensity = 30;
   try {
     const aiResponse = await askDaemon('', true, state);
     processSpeechTags(state, aiResponse);
