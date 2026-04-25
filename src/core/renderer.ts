@@ -21,14 +21,16 @@ export function renderFrame(state: State): string {
   const bgHeight = 32; // Increased to fill vertical space better
   const generateBGLine = (phase: number, row: number) => {
     let line = "";
-    for (let i = 0; i < bgWidth; i++) {
+    const halfWidth = Math.floor(bgWidth / 2);
+    for (let i = 0; i < halfWidth; i++) {
        // Deterministic noise based on phase, row and col
        const noise = Math.sin(row * 0.5 + i * 0.8 + phase * 0.05) * Math.cos(row * 0.8 - i * 0.4 + phase * 0.02);
        const val = Math.abs(noise);
        
        const chars = [" ", " ", " ", " ", ".", "·", " ", " "];
        const charIdx = Math.floor(val * chars.length) % chars.length;
-       line += chars[charIdx];
+       const c = chars[charIdx];
+       line += c + c; // SCALE 2x
     }
     return line;
   };
