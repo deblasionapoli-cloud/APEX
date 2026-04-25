@@ -184,7 +184,7 @@ export function renderFrame(state: State): string {
   if (curL) lines.push(curL);
 
   // Buffer management: determine which window of lines to show
-  const maxHudLines = 8; // More lines for better visibility
+  const maxHudLines = 4; // Reduced to 4 lines as requested
   let hudLinesRendered: string[] = [];
   
   // Create cumulative character count per line to find cursor position
