@@ -1,11 +1,72 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
-import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { 
+  getFirestore, 
+  collection, 
+  addDoc, 
+  query, 
+  where, 
+  orderBy, 
+  limit, 
+  getDocs, 
+  serverTimestamp, 
+  Timestamp,
+  onSnapshot,
+  updateDoc,
+  doc
+} from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 const provider = new GoogleAuthProvider();
 
@@ -22,23 +83,25 @@ export interface Memory {
 
 export async function saveMemory(content: string, category: string = 'interaction') {
   if (!auth.currentUser) return;
+  const path = 'memories';
   try {
-    await addDoc(collection(db, 'memories'), {
+    await addDoc(collection(db, path), {
       content,
       category,
       userId: auth.currentUser.uid,
       timestamp: serverTimestamp()
     });
   } catch (e) {
-    console.error("Error saving memory:", e);
+    handleFirestoreError(e, OperationType.CREATE, path);
   }
 }
 
 export async function getRecentMemories(count: number = 5): Promise<string[]> {
   if (!auth.currentUser) return [];
+  const path = 'memories';
   try {
     const q = query(
-      collection(db, 'memories'),
+      collection(db, path),
       where('userId', '==', auth.currentUser.uid),
       where('category', '==', 'interaction'),
       orderBy('timestamp', 'desc'),
@@ -47,16 +110,17 @@ export async function getRecentMemories(count: number = 5): Promise<string[]> {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => (doc.data() as Memory).content);
   } catch (e) {
-    console.error("Error getting memories:", e);
+    handleFirestoreError(e, OperationType.GET, path);
     return [];
   }
 }
 
 export async function getTraits(count: number = 10): Promise<string[]> {
   if (!auth.currentUser) return [];
+  const path = 'memories';
   try {
     const q = query(
-      collection(db, 'memories'),
+      collection(db, path),
       where('userId', '==', auth.currentUser.uid),
       where('category', '==', 'trait'),
       orderBy('timestamp', 'desc'),
@@ -65,19 +129,18 @@ export async function getTraits(count: number = 10): Promise<string[]> {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => (doc.data() as Memory).content);
   } catch (e) {
-    console.error("Error getting traits:", e);
+    handleFirestoreError(e, OperationType.GET, path);
     return [];
   }
 }
 
 // Remote Input Bridge
-import { onSnapshot, updateDoc, doc } from 'firebase/firestore';
-
 export function onRemoteCommand(callback: (command: string, id: string) => void) {
   if (!auth.currentUser) return () => {};
+  const path = 'remote_inputs';
   
   const q = query(
-    collection(db, 'remote_inputs'),
+    collection(db, path),
     where('userId', '==', auth.currentUser.uid),
     where('processed', '==', false),
     orderBy('timestamp', 'asc'),
@@ -91,29 +154,33 @@ export function onRemoteCommand(callback: (command: string, id: string) => void)
         callback(data.command, change.doc.id);
       }
     });
+  }, (error) => {
+    handleFirestoreError(error, OperationType.GET, path);
   });
 }
 
 export async function markCommandProcessed(id: string) {
+  const path = `remote_inputs/${id}`;
   try {
     await updateDoc(doc(db, 'remote_inputs', id), {
       processed: true
     });
   } catch (e) {
-    console.error("Error marking command processed:", e);
+    handleFirestoreError(e, OperationType.WRITE, path);
   }
 }
 
 export async function sendRemoteCommand(command: string) {
   if (!auth.currentUser) return;
+  const path = 'remote_inputs';
   try {
-    await addDoc(collection(db, 'remote_inputs'), {
+    await addDoc(collection(db, path), {
       command,
       userId: auth.currentUser.uid,
       timestamp: serverTimestamp(),
       processed: false
     });
   } catch (e) {
-    console.error("Error sending remote command:", e);
+    handleFirestoreError(e, OperationType.WRITE, path);
   }
 }

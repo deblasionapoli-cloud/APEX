@@ -240,9 +240,11 @@ function processSpeechTags(state: State, rawSpeech: string) {
   const displaySpeech = rawSpeech
     .replace(/\[ASCII\]([\s\S]*?)(?:\[\/ASCII\]|$)/gi, '')
     .replace(/\[FILE:\s*[^\]\s]+\]([\s\S]*?)(?:\[\/FILE\]|$)/gi, '')
-    .replace(/\[FORM:\s*[^\]]+\]/gi, '') // Strip FORM tags
-    .replace(/\[.*?\]/gi, '') // Strip any other square bracket tags/residue
-    .replace(/Agisci\s+ora:?.*?(\.|$)/gi, '') // Strip residue of the initiative prompt if echoed as text
+    .replace(/\[FORM:\s*[^\]]+\]/gi, '')
+    .replace(/\[STATE:\s*[^\]]+\]/gi, '')
+    .replace(/\[INTENSITY:\s*[^\]]+\]/gi, '')
+    .replace(/\[.*?\]/gi, '') // Final catch-all for any tag-like structures
+    .replace(/\s+/g, ' ')
     .trim()
     .toUpperCase();
 

@@ -204,47 +204,67 @@ export function renderFrame(state: State): string {
   const speechAlignOffset = Math.max(0, Math.floor((maxSpriteWidth - speechBoxWidth) / 2));
   const speechPadding = " ".repeat(speechAlignOffset);
 
-  // 5. HUD Dynamic Text Rendering: Typewriter & Buffer Distortion
+  // 5. HUD Dynamic Text Rendering: Typewriter with [ Frame ]
   const displayedSpeech = state.full_speech || "";
-  const speechLength = displayedSpeech.length;
+  const wrapWidth = 46; // Interior width for text
   
-  // Calculate visibility based on phase since last command
-  const charSpeed = 1.5 + (state.intensity / 50);
+  // Typewriter timing
+  const charSpeed = 1.8 + (state.intensity / 40);
   const visibleCharsThreshold = Math.floor((animation_phase - state.last_command_phase) * charSpeed);
   
-  let processedSpeech = displayedSpeech.substring(0, Math.max(0, visibleCharsThreshold));
+  // Wrap the FULL speech first to get stable lines
+  const allWords = displayedSpeech.split(' ');
+  const lines: string[] = [];
+  let currentLine = "";
   
-  // Add a glitch character at the end of the reveal
-  if (visibleCharsThreshold > 0 && visibleCharsThreshold < speechLength) {
-    const glitches = ["_", "█", "▒", "░", "/", "\\", "¶", "§", "∆", "√"];
-    processedSpeech += glitches[Math.floor(Math.random() * glitches.length)];
-  }
-
-  // Wrap speech into multiple lines for the HUD (max 3 lines)
-  const wrapWidth = 50;
-  const rawSpeechLines_HUD: string[] = [];
-  for (let i = 0; i < processedSpeech.length && rawSpeechLines_HUD.length < 3; i += wrapWidth) {
-    rawSpeechLines_HUD.push(processedSpeech.substring(i, i + wrapWidth));
-  }
-  
-  const hudLines = rawSpeechLines_HUD.map((line, i) => {
-    // Slight jitter to the line position if intensity is high
-    const jitter = (intensity > 50 && Math.random() > 0.95) ? " " : "";
-    return `> ${jitter}${line}`.padEnd(wrapWidth + 3);
+  allWords.forEach(word => {
+    if ((currentLine + word).length <= wrapWidth) {
+      currentLine += (currentLine === "" ? "" : " ") + word;
+    } else {
+      lines.push(currentLine);
+      currentLine = word;
+    }
   });
+  if (currentLine) lines.push(currentLine);
 
-  while (hudLines.length < 3) hudLines.push(" ".repeat(wrapWidth + 3));
-
-  // Current sliding queue (smaller, to the side or above)
-  const miniQueue = state.speech_queue.slice(0, 3).map(l => l.substring(0, 29));
+  // Now determine which lines/characters are visible
+  let charsProcessed = 0;
+  const hudLinesRendered: string[] = [];
   
+  for (let i = 0; i < lines.length && hudLinesRendered.length < 4; i++) {
+    const line = lines[i];
+    const lineVisibleCount = Math.max(0, visibleCharsThreshold - charsProcessed);
+    
+    if (lineVisibleCount <= 0) {
+      // Line not yet visible
+      hudLinesRendered.push(`[ ${"".padEnd(wrapWidth)} ]`);
+    } else if (lineVisibleCount < line.length) {
+      // Line partially visible
+      const partial = line.substring(0, lineVisibleCount);
+      const glitch = ["_", "█", "▒", "░"][Math.floor(animation_phase / 4) % 4];
+      hudLinesRendered.push(`[ ${ (partial + glitch).padEnd(wrapWidth) } ]`);
+      charsProcessed += line.length;
+      break; // Stop here, rest of lines stay empty
+    } else {
+      // Line fully visible
+      hudLinesRendered.push(`[ ${line.padEnd(wrapWidth)} ]`);
+      charsProcessed += line.length;
+    }
+  }
+
+  while (hudLinesRendered.length < 3) {
+    hudLinesRendered.push(`[ ${"".padEnd(wrapWidth)} ]`);
+  }
+
+  const hudLines = hudLinesRendered.slice(0, 3);
+
   // 4. Composite: Foreground over Background
   const bgLines = new Array(bgHeight).fill("").map((_, idx) => generateBGLine(animation_phase, idx));
   
   // Character sprite layout
   const maxLineLength = Math.max(...spriteLines.map(l => l.length));
   const charHOffset = Math.max(0, Math.floor((bgWidth - maxLineLength) / 2));
-  const charVOffset = Math.max(0, Math.floor((bgHeight - spriteLines.length) / 2) + totalYShift - 2);
+  const charVOffset = Math.max(0, Math.floor((bgHeight - (spriteLines.length + 5)) / 2) + totalYShift);
 
   const frame = bgLines.map((bg, idx) => {
     // 1. Overlay Character Sprite
@@ -253,13 +273,11 @@ export function renderFrame(state: State): string {
 
     if (spriteIdx >= 0 && spriteIdx < spriteLines.length) {
         const spriteLine = spriteLines[spriteIdx];
-        const spriteChars = spriteLine.split('');
         const lineChars = currentLine.split('');
-        
-        for (let i = 0; i < spriteChars.length; i++) {
+        for (let i = 0; i < spriteLine.length; i++) {
             const hPos = charHOffset + i;
-            if (hPos >= 0 && hPos < bgWidth && spriteChars[i] !== ' ') {
-                lineChars[hPos] = spriteChars[i];
+            if (hPos >= 0 && hPos < bgWidth && spriteLine[i] !== ' ') {
+                lineChars[hPos] = spriteLine[i];
             }
         }
         currentLine = lineChars.join('');
@@ -271,13 +289,11 @@ export function renderFrame(state: State): string {
     if (hudIdx >= 0 && hudIdx < hudLines.length) {
         const hudLine = hudLines[hudIdx];
         const hudHOffset = Math.floor((bgWidth - hudLine.length) / 2);
-        const hudChars = hudLine.split('');
         const lineChars = currentLine.split('');
-
-        for (let i = 0; i < hudChars.length; i++) {
+        for (let i = 0; i < hudLine.length; i++) {
             const hPos = hudHOffset + i;
             if (hPos >= 0 && hPos < bgWidth) {
-                lineChars[hPos] = hudChars[i];
+                lineChars[hPos] = hudLine[i];
             }
         }
         currentLine = lineChars.join('');

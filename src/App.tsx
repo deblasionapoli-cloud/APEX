@@ -96,38 +96,10 @@ export default function App() {
       socket.disconnect();
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
-  }, [isRemoteMode]);
+  }, []); // Remove isRemoteMode dependency to keep socket stable
 
   const processDaemonResponse = (response: string) => {
-    let cleanResponse = response;
-    
-    // Check for file generation tags: [FILE:name.ext]content[/FILE]
-    const fileMatch = response.match(/\[FILE:\s*([^\]\s]+)\]([\s\S]*?)(?:\[\/FILE\]|$)/i);
-    if (fileMatch) {
-      const filename = fileMatch[1].trim();
-      const content = fileMatch[2].trim();
-      
-      if (content.length > 0) {
-        // Trigger download
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        // Add to log
-        setGeneratedFiles(prev => [{name: filename, time: new Date().toLocaleTimeString()}, ...prev].slice(0, 5));
-      }
-      
-      // Remove file block from speech
-      cleanResponse = cleanResponse.replace(/\[FILE:\s*([^\]\s]+)\]([\s\S]*?)(?:\[\/FILE\]|$)/gi, '').trim();
-    }
-
-    // Check for morph tags: [FORM: morph_name]
+    // 1. Process Actions (Morph, State, Intensity)
     const morphMatch = response.match(/\[FORM:\s*([^\]]+)\]/i);
     if (morphMatch) {
       const morphName = morphMatch[1].trim().toLowerCase();
@@ -137,7 +109,6 @@ export default function App() {
       }
     }
 
-    // Check for state tags: [STATE: mood]
     const stateMatch = response.match(/\[STATE:\s*([^\]]+)\]/i);
     if (stateMatch) {
       const stateName = stateMatch[1].trim().toLowerCase();
@@ -147,7 +118,6 @@ export default function App() {
       }
     }
 
-    // Check for intensity tags: [INTENSITY: value]
     const intensityMatch = response.match(/\[INTENSITY:\s*(\d+)\]/i);
     if (intensityMatch) {
       const val = parseInt(intensityMatch[1]);
@@ -155,13 +125,33 @@ export default function App() {
         socketRef.current?.emit('command', `intensity ${val}`);
       }
     }
-    
-    // Clean all tags from display text
-    cleanResponse = response
+
+    // 2. Process File Generation
+    const fileMatch = response.match(/\[FILE:\s*([^\]\s]+)\]([\s\S]*?)(?:\[\/FILE\]|$)/i);
+    if (fileMatch) {
+      const filename = fileMatch[1].trim();
+      const content = fileMatch[2].trim();
+      if (content.length > 0) {
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setGeneratedFiles(prev => [{name: filename, time: new Date().toLocaleTimeString()}, ...prev].slice(0, 5));
+      }
+    }
+
+    // 3. Clean and Speak: Remove all tags and speak the residue
+    const cleanResponse = response
       .replace(/\[FILE:\s*[^\]]+\][\s\S]*?\[\/FILE\]/gi, '')
       .replace(/\[FORM:\s*[^\]]+\]/gi, '')
       .replace(/\[STATE:\s*[^\]]+\]/gi, '')
       .replace(/\[INTENSITY:\s*[^\]]+\]/gi, '')
+      .replace(/\[.*?\]/gi, '') // Final catch-all
       .replace(/\s+/g, ' ')
       .trim();
 

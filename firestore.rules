@@ -45,7 +45,9 @@ service cloud.firestore {
       allow read, list: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow create: if isSignedIn() && isValidRemoteCommand(request.resource.data) && isValidId(inputId);
       allow update: if isSignedIn() && isOwner(resource.data.userId) && 
-                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['processed']);
+                      resource.data.processed == false &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['processed']) &&
+                      request.resource.data.processed == true;
       allow delete: if isOwner(resource.data.userId);
     }
   }
