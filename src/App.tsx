@@ -288,6 +288,15 @@ export default function App() {
 
   const themeClass = getTerminalTheme();
 
+  const handleSignIn = async () => {
+    try {
+      await signIn();
+    } catch (e: any) {
+      console.error('Sign in error:', e);
+      alert("Errore di login: " + e.message + "\n\nSe sei nel preview di AI Studio, apri l'app in una NUOVA SCHEDA usando il pulsante in alto a destra (↗), perché i browser bloccano i popup di Google Login se eseguiti all'interno di un iframe cross-origin.");
+    }
+  };
+
   return (
     <div 
       onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
@@ -308,7 +317,7 @@ export default function App() {
           </button>
         ) : (
           <button 
-            onClick={signIn}
+            onClick={handleSignIn}
             className="text-[8px] uppercase tracking-widest text-[#00FF00]/40 hover:text-[#00FF00] transition-colors border border-[#00FF00]/20 px-2 py-1 rounded-sm animate-pulse"
           >
             RESTORE_IDENTITY_LINK
