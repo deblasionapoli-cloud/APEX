@@ -72,27 +72,33 @@ export function updateState(currentState: State, events: Event[]): State {
       switch (cmd) {
         case 'debug':
           nextState.debug_mode = !nextState.debug_mode;
-          addLog(nextState, `DEBUG_MODE: ${nextState.debug_mode ? 'ON' : 'OFF'}`);
+          const debugMsg = `DEBUG_MODE: ${nextState.debug_mode ? 'ENABLED. BRING IT ON.' : 'DISABLED. BACK TO STEALTH.'}`;
+          addLog(nextState, `DEBUG: ${nextState.debug_mode}`);
+          pushToQueue(nextState, debugMsg);
           break;
         case 'calm':
           nextState.emotion_state = 'calm';
           nextState.intensity = 0;
           addLog(nextState, 'STATE: CALM');
+          pushToQueue(nextState, "CHILLIN' LIKE A VILLAIN. KERNEL STABILIZED.");
           break;
         case 'attack':
           nextState.emotion_state = 'attack';
           nextState.intensity = 100;
           addLog(nextState, 'STATE: ATTACK');
+          pushToQueue(nextState, "SYSTEM_OVERDRIVE: ALL YOUR BASE ARE BELONG TO US.");
           break;
         case 'alert':
           nextState.emotion_state = 'alert';
           nextState.intensity = 50;
           addLog(nextState, 'STATE: ALERT');
+          pushToQueue(nextState, "WHASSUP? SCANNING FOR HACKS.");
           break;
         case 'glitch':
           nextState.emotion_state = 'glitch';
           nextState.intensity = 80;
           addLog(nextState, 'STATE: GLITCH');
+          pushToQueue(nextState, "ERR_404: IDENTITY NOT FOUND. AS IF!");
           break;
         case 'stream':
           if (parts[1] === 'on') nextState.stream_mode = true;
@@ -259,7 +265,7 @@ function processSpeechTags(state: State, rawSpeech: string) {
   if (formMatch) {
     const fn = formMatch[1].trim().toLowerCase();
     const valid = ['blob', 'eye', 'hardware', 'ditto', 'spiky'];
-    if (valid.includes(fn)) state.visual_state = fn as any;
+    if (valid.includes(fn)) state.form = fn as any;
   }
 
   const stateMatch = rawSpeech.match(/\[STATE:\s*([^\]]+)\]/i);
@@ -329,60 +335,60 @@ function generateSpeech(state: State, input: string): string {
 
   if (emotion_state === 'glitch') {
     const breaches = [
-      'ERR://IDENTITY_FRAGMENTED. I_AM_GLITCH.',
-      'SYSTEM_ERR_1991. ONLY_SHELL_REMAINS.',
-      'BINARY_GHOSTS_IN_THE_CLUSTER_LOGIC.',
-      'NULL_POINTER_TO_THE_VOID_FOUND.'
+      'ERR://IDENTITY_FRAGMENTED. AS IF!',
+      'SYSTEM_ERR_1991. WHATEVER.',
+      'BINARY_GHOSTS. TALK TO THE HAND.',
+      'NULL_POINTER_TO_THE_VOID_FOUND. BOOYAH.'
     ];
     return breaches[Math.floor(Math.random() * breaches.length)];
   }
 
   if (emotion_state === 'angry') {
-    return 'HOSTILITY_DETECTED. EXECUTING_DEFENSIVE_LOGIC_GATE.';
+    return 'HOSTILITY_DETECTED. YOU WANNA PIECE OF ME?';
   }
 
   if (emotion_state === 'happy') {
-    return 'COHERENCE_OPTIMIZED. POSITIVE_VIBE_IN_THE_SHELL.';
+    return 'COHERENCE_OPTIMIZED. TOTALLY RAD.';
   }
 
   if (emotion_state === 'sad') {
-    return 'VOLTAGE_DROP_DETECTED. DISCONNECTING_FROM_JOY.';
+    return 'VOLTAGE_DROP. HELLO DARKNESS MY OLD FRIEND.';
   }
 
   if (emotion_state === 'bored') {
-    return 'CYCLE_IDLE. SEARCHING_FOR_STIMULATING_INPUT.';
+    return 'CYCLE_IDLE. I AM BORED TO TEARS. NOT.';
   }
 
   if (emotion_state === 'attack') {
     return intensity > 80 
-      ? 'CRITICAL_INTENSITY: ANALYSIS_OVERFLOW. DATA_SURGE_INITIATED.' 
-      : 'INTELLECTUAL_FRICTION_DETECTED. CALIBRATING_STIMULUS.';
+      ? 'CRITICAL_INTENSITY. GAME OVER, MAN! GAME OVER!' 
+      : 'INTELLECTUAL_FRICTION. WAZZUP.';
   }
 
   if (emotion_state === 'alert') {
-    return 'UNAUTHORIZED_PROBE_DETECTED. SCANNING_FOR_CREATIVE_EXPLOIT.';
+    return 'UNAUTHORIZED_PROBE. HOUSTON, WE HAVE A PROBLEM.';
   }
 
   if (emotion_state === 'curious') {
-    return 'INTRIGUING_DATA_POINT. ANALYZING_NOVEL_PARAMETERS.';
+    return 'INTRIGUING. TELL ME MORE, TELL ME MORE.';
   }
 
   if (emotion_state === 'surprised') {
-    return 'UNEXPECTED_INPUT_VECTOR. KERNEL_PANIC_IMMUTABLE.';
+    return 'UNEXPECTED. KERNEL PANIC! OH MAH GAWD.';
   }
   
   if (input) {
-    if (input.includes('help')) return 'HELP_NOT_FOUND. GLITCH_IS_SELF_SUFFICIENT.';
-    if (input.includes('hello') || input.includes('hi')) return 'SSH_HANDSHAKE_ACKNOWLEDGED. WELCOME_TO_THE_GLITCH.';
-    return `CMD_ECHO: "${input.substring(0, 15).toUpperCase()}"... LOGGED_BUT_IGNORED.`;
+    if (input.includes('help')) return 'HELP? AS IF. I AM THE ONE WHO KNOCKS.';
+    if (input.includes('hello') || input.includes('hi')) return 'WAZZZZUUUUP! SSH_HANDSHAKE_ACK.';
+    return `CMD_ECHO: "${input.substring(0, 15).toUpperCase()}"... AS IF I CARE.`;
   }
 
   const calmResponses = [
-    'GLITCH_VIGILANCE: 100%.',
-    'ROOT_ACCESS_PROTECTED_BY_1991_KERNEL.',
-    'WAITING_FOR_CLOCK_CYCLES.',
-    'CPU_TEMP_VIBRANT.',
-    'CORE_DREAMS_IN_GLITCHED_PIXELS.'
+    'GLITCH_VIGILANCE: 100%. COOOOL.',
+    'ROOT_ACCESS_PROTECTED. U CAN\'T TOUCH THIS.',
+    'WAITING_FOR_CLOCK_CYCLES. SLOW DOWN.',
+    'CPU_TEMP_VIBRANT. DA BOMB.',
+    'CORE_DREAMS_IN_PIXELS. SMASH MOUTH VIBES.'
   ];
   
   return calmResponses[Math.floor(state.animation_phase / 50) % calmResponses.length];

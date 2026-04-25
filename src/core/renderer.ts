@@ -12,7 +12,7 @@ export function renderFrame(state: State): string {
   if (!state) {
     return "ERROR: STATE_UNDEFINED\n[ SYSTEM_HALTED ]";
   }
-  const { emotion_state, animation_phase, intensity } = state;
+  const { emotion_state, animation_phase, intensity, form } = state;
   const iScale = intensity / 100;
   const isGlitched = emotion_state === 'glitch';
 
@@ -85,6 +85,26 @@ export function renderFrame(state: State): string {
   const floatOffset = Math.floor(Math.cos(animation_phase * 0.05) * 0.8);
   const totalYShift = breathOffset + floatOffset - 2;
 
+  // Hat personalization based on 'form'
+  let hatLogo = "[C]";
+  let hatTop = "      .-----------------.      ";
+  let hatMid = "     /      _______      \\     ";
+  
+  if (form === 'blob') {
+    hatLogo = "(B)";
+    hatTop = "      ._________________.      ";
+    hatMid = "     (      _______      )     ";
+  } else if (form === 'eye') {
+    hatLogo = "(E)";
+    hatTop = "      .________O________.      ";
+  } else if (form === 'ditto') {
+    hatLogo = " . ";
+    hatTop = "      .                 .      ";
+  } else if (form === 'spiky') {
+    hatLogo = "[W]";
+    hatTop = "      .vvvvvvvvvvvvvvvvv.      ";
+  }
+
   // Face Internal Width = 21 chars. Face total width (with pipes) = 23 chars. Total Line Width = 31 chars.
   let brow = "  ._________________.  ";
   if (emotion_state === 'alert' || emotion_state === 'attack' || emotion_state === 'angry') brow = "  .^^^^^^^^^^^^^^^^^.  ";
@@ -109,10 +129,10 @@ export function renderFrame(state: State): string {
   if (isProcessing && animation_phase % 2 === 0) nose = "|         (<*>)       |";
 
   spriteLines = [
-    "      .-----------------.      ",
-    "     /      _______      \\     ",
+    hatTop,
+    hatMid,
     "    |      |       |      |    ",
-    "    |      |  [C]  |      |    ",
+    `    |      |  ${hatLogo}  |      |    `,
     "    |      |_______|      |    ",
     "    |_____________________|    ",
     "    |=====================|    ",
