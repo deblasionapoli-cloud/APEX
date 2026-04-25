@@ -32,6 +32,8 @@ export interface State {
   context_memory: string[]; // Recent news patterns
   is_thinking: boolean; // Prevenzione chiamate multiple
   custom_sprite?: string; // DNA visivo dinamico
+  debug_mode: boolean;
+  debug_logs: string[];
 }
 
 export const INITIAL_STATE: State = {
@@ -53,5 +55,7 @@ export const INITIAL_STATE: State = {
     gpu_usage: 2
   },
   context_memory: [],
-  is_thinking: false
+  is_thinking: false,
+  debug_mode: false,
+  debug_logs: []
 };

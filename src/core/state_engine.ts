@@ -70,29 +70,39 @@ export function updateState(currentState: State, events: Event[]): State {
       const cmd = parts[0];
 
       switch (cmd) {
+        case 'debug':
+          nextState.debug_mode = !nextState.debug_mode;
+          addLog(nextState, `DEBUG_MODE: ${nextState.debug_mode ? 'ON' : 'OFF'}`);
+          break;
         case 'calm':
           nextState.emotion_state = 'calm';
           nextState.intensity = 0;
+          addLog(nextState, 'STATE: CALM');
           break;
         case 'attack':
           nextState.emotion_state = 'attack';
           nextState.intensity = 100;
+          addLog(nextState, 'STATE: ATTACK');
           break;
         case 'alert':
           nextState.emotion_state = 'alert';
           nextState.intensity = 50;
+          addLog(nextState, 'STATE: ALERT');
           break;
         case 'glitch':
           nextState.emotion_state = 'glitch';
           nextState.intensity = 80;
+          addLog(nextState, 'STATE: GLITCH');
           break;
         case 'stream':
           if (parts[1] === 'on') nextState.stream_mode = true;
           if (parts[1] === 'off') nextState.stream_mode = false;
+          addLog(nextState, `STREAM: ${nextState.stream_mode}`);
           break;
         case 'speak':
           const rawSpeech = event.payload.substring(6);
           processSpeechTags(nextState, rawSpeech);
+          addLog(nextState, 'MSG: INCOMING_SPEECH');
           break;
       }
     } else {
@@ -376,4 +386,13 @@ function generateSpeech(state: State, input: string): string {
   ];
   
   return calmResponses[Math.floor(state.animation_phase / 50) % calmResponses.length];
+}
+
+function addLog(state: State, message: string) {
+  if (!state.debug_logs) state.debug_logs = [];
+  const timestamp = new Date().toLocaleTimeString('it-IT', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  state.debug_logs.push(`[${timestamp}] ${message}`);
+  if (state.debug_logs.length > 20) {
+    state.debug_logs.shift();
+  }
 }

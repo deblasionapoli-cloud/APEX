@@ -236,7 +236,7 @@ export function renderFrame(state: State): string {
   const charHOffset = Math.max(0, Math.floor((bgWidth - maxLineLength) / 2));
   const charVOffset = Math.max(0, Math.floor((bgHeight - (spriteLines.length + hudLines.length + 1)) / 2) + totalYShift);
 
-  const frame = bgLines.map((bg, idx) => {
+  const frameLines = bgLines.map((bg, idx) => {
     // 1. Overlay Character Sprite
     const spriteIdx = idx - charVOffset;
     let currentLine = bg;
@@ -284,9 +284,28 @@ export function renderFrame(state: State): string {
     }
 
     return currentLine;
-  }).join("\n");
+  });
 
-  return frame;
+  // 5. Overlay Debug Logs (Floating Top Right)
+  if (state.debug_mode && state.debug_logs && state.debug_logs.length > 0) {
+    const logs = state.debug_logs.slice(-10);
+    logs.forEach((log, i) => {
+      const row = 1 + i;
+      if (row < frameLines.length) {
+        const logStr = ` > ${log} `;
+        const startX = Math.max(0, bgWidth - logStr.length - 2);
+        const lineChars = frameLines[row].split('');
+        for (let j = 0; j < logStr.length; j++) {
+          if (startX + j < bgWidth) {
+            lineChars[startX + j] = logStr[j];
+          }
+        }
+        frameLines[row] = lineChars.join('');
+      }
+    });
+  }
+
+  return frameLines.join("\n");
 }
 
 function shiftLeft(s: string, n: number): string {
