@@ -453,26 +453,34 @@ export default function App() {
             </button>
  
           <pre 
-            className={`${themeClass} text-[2.4vh] md:text-[2.8vh] leading-none tracking-tighter flex flex-col items-center justify-center select-none transition-all duration-200 overflow-hidden font-mono w-full h-full flex-1`}
+            className={`${themeClass} text-[2.2vh] sm:text-[2.4vh] md:text-[2.8vh] leading-none tracking-tighter flex flex-col items-center justify-center select-none transition-all duration-200 overflow-hidden font-mono w-full h-full flex-1 relative`}
+            style={{
+              filter: 'contrast(1.05) brightness(1.02)',
+              textShadow: '0 0 5px rgba(255,255,255,0.05)'
+            }}
           >
+            {/* Diffusion Layer */}
+            <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay" />
+            
             {frame.split('\n').map((line, i) => {
               // AREA SEPARATION: Character (Top/Mid) vs HUD (Bottom)
-              // The HUD starts at index 26 and lasts for 4 lines (up to 29)
               const isHud = i >= 26 && i < 30; 
               
               return (
                 <div 
                   key={i} 
-                  className={`flex justify-center w-full overflow-visible ${isHud ? 'py-[0.5vh]' : 'py-[0.01vh]'}`}
+                  className={`flex justify-center w-full overflow-visible ${isHud ? 'py-[0.4vh]' : 'py-[0.01vh]'}`}
                   data-entity={isHud ? 'hud' : 'character'}
                 >
                   <span 
-                    className={`whitespace-pre inline-block transition-all duration-300 ${isHud ? 'font-bold opacity-100' : 'opacity-90'}`} 
+                    className={`whitespace-pre inline-block transition-all duration-300 ${isHud ? 'font-bold opacity-100' : 'opacity-[0.82]'}`} 
                     style={{ 
-                      // HUD gets a massive boost for readability, Character stays artistic
-                      transform: isHud ? 'scale(2.4, 1.8)' : 'scale(1.25, 1.1)', 
+                      transform: isHud ? 'scale(2.0, 1.6)' : 'scale(1.2, 1.1)', 
                       transformOrigin: 'center',
-                      filter: isHud ? 'brightness(1.6) drop-shadow(0 0 2px rgba(255,255,255,0.2))' : 'none'
+                      // Hollywood Blackmagic Simulation: Diffusion (blur) + Halation (drop-shadow)
+                      filter: isHud 
+                        ? 'brightness(1.6) drop-shadow(0 0 2px rgba(255,255,255,0.2))' 
+                        : `blur(0.45px) drop-shadow(0 0 3px rgba(255,255,255,0.12)) brightness(${0.96 + Math.sin(Date.now() * 0.005) * 0.02})`
                     }}
                   >
                     {line}

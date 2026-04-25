@@ -25,11 +25,15 @@ export function renderFrame(state: State): string {
     // Horizontal scale 2x by doubling characters: iterate half width and append twice
     const halfWidth = Math.floor(bgWidth / 2);
     for (let i = 0; i < halfWidth; i++) {
-       // Deterministic noise based on phase, row and col
-       const noise = Math.sin(row * 0.5 + i * 0.8 + phase * 0.05) * Math.cos(row * 0.8 - i * 0.4 + phase * 0.02);
-       const val = Math.abs(noise);
+       // Enhanced noise: Multi-frequency sine waves + temporal jitter
+       const noise1 = Math.sin(row * 0.5 + i * 0.8 + phase * 0.08);
+       const noise2 = Math.cos(row * 1.2 - i * 0.3 + phase * 0.12);
+       const jitter = Math.sin(phase * 0.2 + i * 1.5 + row * 2.1);
        
-       const chars = [" ", " ", " ", " ", ".", "·", " ", " "];
+       const val = Math.abs(noise1 * 0.4 + noise2 * 0.4 + jitter * 0.2);
+       
+       // Denser character set for higher grain visibility (Static/Snow effect)
+       const chars = [" ", "·", " ", ".", " ", "'", "·", " ", " ", "·", ".", "`"];
        const charIdx = Math.floor(val * chars.length) % chars.length;
        const c = chars[charIdx];
        line += c + c; 
@@ -117,8 +121,19 @@ export function renderFrame(state: State): string {
 
   let mouth = "|    {===========}    |";
   if (isSpeaking) {
-    const frames = ["|    {    ---    }    |", "|    {   (---)   }    |", "|    {    -o-    }    |", "|    {     o     }    |", "|    {    ---    }    |"];
-    mouth = frames[animation_phase % frames.length];
+    // Advanced Lip Sync: Link mouth frame to actual typewriter progress
+    // and introduce variable intensity based on state.intensity
+    const typingProgress = animation_phase % 8;
+    const isQuiet = intensity < 30;
+    
+    let frames = ["|    {    ---    }    |", "|    {   (---)   }    |", "|    {    -o-    }    |", "|    {     o     }    |"];
+    if (isQuiet) {
+      frames = ["|    {    ---    }    |", "|    {   -----   }    |", "|    {    ---    }    |", "|    {    ...    }    |"];
+    } else if (intensity > 70) {
+      frames = ["|    {   ( O )   }    |", "|    {    -X-    }    |", "|    {   [---]   }    |", "|    {    (0)    }    |"];
+    }
+    
+    mouth = frames[typingProgress % frames.length];
   } else if (emotion_state === 'attack' || emotion_state === 'angry') {
     mouth = (animation_phase % 2 === 0) ? "|    {VVVVVVVVVVV}    |" : "|    {^^^^^^^^^^^}    |";
   } else if (emotion_state === 'happy') {
@@ -181,7 +196,9 @@ export function renderFrame(state: State): string {
   if (horizontalSway !== 0) {
     spriteLines = spriteLines.map(line => {
       const p = " ".repeat(Math.abs(horizontalSway));
-      return horizontalSway > 0 ? p + line : line + p;
+      let moved = horizontalSway > 0 ? p + line : line + p;
+      // Ensure we don't bleed out of sprite boundaries if needed
+      return moved;
     });
   }
 
