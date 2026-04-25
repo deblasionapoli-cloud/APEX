@@ -184,3 +184,21 @@ export async function sendRemoteCommand(command: string) {
     handleFirestoreError(e, OperationType.WRITE, path);
   }
 }
+
+export async function clearAllMemories() {
+  if (!auth.currentUser) return;
+  const path = 'memories';
+  try {
+    const q = query(
+      collection(db, path),
+      where('userId', '==', auth.currentUser.uid)
+    );
+    const snapshot = await getDocs(q);
+    // Delete in a loop or batch (using deleteDoc)
+    const { deleteDoc } = await import('firebase/firestore');
+    const deletePromises = snapshot.docs.map(d => deleteDoc(d.ref));
+    await Promise.all(deletePromises);
+  } catch (e) {
+    handleFirestoreError(e, OperationType.DELETE, path);
+  }
+}

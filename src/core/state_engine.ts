@@ -262,7 +262,7 @@ function processSpeechTags(state: State, rawSpeech: string) {
   const stateMatch = rawSpeech.match(/\[STATE:\s*([^\]]+)\]/i);
   if (stateMatch) {
     const sn = stateMatch[1].trim().toLowerCase();
-    const valid = ['attack', 'alert', 'calm', 'curious', 'sad'];
+    const valid = ['attack', 'alert', 'calm', 'curious', 'sad', 'happy', 'angry', 'bored', 'surprised', 'confused', 'excited', 'scared', 'thoughtful', 'shy', 'proud'];
     if (valid.includes(sn)) state.emotion_state = sn as any;
   }
 

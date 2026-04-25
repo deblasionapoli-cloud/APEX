@@ -8,7 +8,7 @@ import { io, Socket } from 'socket.io-client';
 import { State, INITIAL_STATE } from './core/types';
 import { renderFrame } from './core/renderer';
 import { askDaemon } from './services/aiService';
-import { auth, signIn, signOut, onRemoteCommand, markCommandProcessed, sendRemoteCommand } from './services/memoryService';
+import { auth, signIn, signOut, onRemoteCommand, markCommandProcessed, sendRemoteCommand, clearAllMemories } from './services/memoryService';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { Maximize2, Minimize2, Radio, Terminal } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -89,7 +89,7 @@ export default function App() {
     const stateMatch = response.match(/\[STATE:\s*([^\]]+)\]/i);
     if (stateMatch) {
       const stateName = stateMatch[1].trim().toLowerCase();
-      const validStates = ['attack', 'alert', 'calm', 'curious', 'sad'];
+      const validStates = ['attack', 'alert', 'calm', 'curious', 'sad', 'happy', 'angry', 'bored', 'surprised', 'confused', 'excited', 'scared', 'thoughtful', 'shy', 'proud'];
       if (validStates.includes(stateName)) {
         socketRef.current?.emit('command', stateName);
       }
@@ -169,6 +169,16 @@ export default function App() {
     }
     if (lowerInput.includes('stream off') || lowerInput.includes('disattiva stream')) {
       socketRef.current.emit('command', 'stream off');
+      return;
+    }
+    
+    // Memory wipe
+    if (cleanInput.trim() === '/reset') {
+      setIsAiLoading(true);
+      await clearAllMemories();
+      setIsAiLoading(false);
+      socketRef.current?.emit('command', 'calm');
+      alert("Memoria di sistema e tratti personalità cancellati con successo.");
       return;
     }
 
@@ -252,15 +262,15 @@ export default function App() {
       return glitchThemes[idx];
     }
 
-    if (emotion_state === 'attack') return 'text-phosphor-red glow-red';
+    if (emotion_state === 'attack' || emotion_state === 'angry') return 'text-phosphor-red glow-red';
     
     // Kintsugi Color Shift
     if (color_mode === 'warm') return 'text-phosphor-amber glow-amber'; 
 
-    if (emotion_state === 'alert' || iScale > 0.5) return 'text-phosphor-amber glow-amber';
-    if (emotion_state === 'curious' || emotion_state === 'sad') return 'text-phosphor-cyan glow-cyan';
-    if (emotion_state === 'surprised') return 'text-phosphor-magenta glow-magenta';
-    if (emotion_state === 'bored') return 'text-phosphor-green opacity-70 brightness-75';
+    if (emotion_state === 'alert' || emotion_state === 'scared' || iScale > 0.5) return 'text-phosphor-amber glow-amber';
+    if (emotion_state === 'curious' || emotion_state === 'sad' || emotion_state === 'thoughtful' || emotion_state === 'confused') return 'text-phosphor-cyan glow-cyan';
+    if (emotion_state === 'surprised' || emotion_state === 'happy' || emotion_state === 'excited' || emotion_state === 'proud') return 'text-phosphor-magenta glow-magenta';
+    if (emotion_state === 'bored' || emotion_state === 'shy') return 'text-phosphor-green opacity-70 brightness-75';
     
     return 'text-phosphor-green glow-green';
   };
@@ -322,7 +332,7 @@ export default function App() {
             </button>
  
             <pre 
-              className={`${themeClass} text-[2.2vh] sm:text-[2.4vh] md:text-[2.8vh] leading-none tracking-tighter flex flex-col items-center justify-center select-none transition-all duration-200 overflow-hidden font-mono w-full h-full flex-1 relative`}
+              className={`${themeClass} text-[min(2.0vh,1.5vw)] sm:text-[min(2.4vh,1.5vw)] md:text-[min(2.8vh,1.5vw)] leading-none tracking-tighter flex flex-col items-center justify-center select-none transition-all duration-200 overflow-hidden font-mono w-full h-full flex-1 relative`}
             >
               {(() => {
                 const lines = frame.split('\n');
@@ -340,7 +350,7 @@ export default function App() {
                       <span 
                         className={`whitespace-pre inline-block transition-all duration-300 ${isHud ? 'font-bold opacity-100' : 'opacity-[0.85]'}`} 
                         style={{ 
-                          transform: isHud ? 'scale(2.2, 1.7)' : 'scale(1.2, 1.1)', 
+                          transform: isHud ? 'scale(1.5, 1.4)' : 'scale(1.2, 1.1)', 
                           transformOrigin: 'center'
                         }}
                       >

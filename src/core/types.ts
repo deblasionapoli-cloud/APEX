@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type EmotionState = 'calm' | 'alert' | 'attack' | 'glitch' | 'curious' | 'surprised' | 'happy' | 'sad' | 'angry' | 'bored';
+export type EmotionState = 'calm' | 'alert' | 'attack' | 'glitch' | 'curious' | 'surprised' | 'happy' | 'sad' | 'angry' | 'bored' | 'confused' | 'excited' | 'scared' | 'thoughtful' | 'shy' | 'proud';
 
 export interface Event {
   type: 'command' | 'intent';

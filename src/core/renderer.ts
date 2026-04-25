@@ -49,10 +49,14 @@ export function renderFrame(state: State): string {
     eyeL = symbols[animation_phase % symbols.length];
     eyeR = symbols[(animation_phase + 1) % symbols.length];
     eyeC = " [!] ";
-  } else if (emotion_state === 'happy') { eyeL = " ^ "; eyeR = " ^ "; eyeC = " [^] "; }
+  } else if (emotion_state === 'happy' || emotion_state === 'proud') { eyeL = " ^ "; eyeR = " ^ "; eyeC = " [^] "; }
   else if (emotion_state === 'sad') { eyeL = " . "; eyeR = " . "; eyeC = " [.] "; }
   else if (emotion_state === 'bored') { eyeL = " - "; eyeR = " - "; eyeC = " [-] "; }
-  else if (emotion_state === 'surprised') { eyeL = " o "; eyeR = " o "; eyeC = " [o] "; }
+  else if (emotion_state === 'surprised' || emotion_state === 'scared') { eyeL = " o "; eyeR = " o "; eyeC = " [o] "; }
+  else if (emotion_state === 'confused') { eyeL = " ? "; eyeR = " ? "; eyeC = " [?] "; }
+  else if (emotion_state === 'shy') { eyeL = " > "; eyeR = " < "; eyeC = " [~] "; }
+  else if (emotion_state === 'excited') { eyeL = " * "; eyeR = " * "; eyeC = " [*] "; }
+  else if (emotion_state === 'thoughtful') { eyeL = " ¬ "; eyeR = " ¬ "; eyeC = " [-] "; }
   else if (emotion_state === 'curious') {
     const focalPoint = Math.floor(animation_phase / 6) % 8;
     const eyeFrames = [" o ", " . ", " O ", " o ", " @ ", " . ", " o ", " * "];
@@ -70,10 +74,11 @@ export function renderFrame(state: State): string {
 
   let brow = "  ._________________.  ";
   if (emotion_state === 'alert' || emotion_state === 'attack' || emotion_state === 'angry') brow = "  .^^^^^^^^^^^^^^^^^.  ";
-  else if (emotion_state === 'curious') brow = "  .____/_______/____.  ";
-  else if (emotion_state === 'surprised') brow = "  .  /           \\  .  ";
-  else if (emotion_state === 'happy') brow = "  .   \\         /   .  ";
-  else if (emotion_state === 'sad') brow = "  .   /         \\   .  ";
+  else if (emotion_state === 'curious' || emotion_state === 'confused') brow = "  .____/_______/____.  ";
+  else if (emotion_state === 'surprised' || emotion_state === 'scared') brow = "  .  /           \\  .  ";
+  else if (emotion_state === 'happy' || emotion_state === 'excited' || emotion_state === 'proud') brow = "  .   \\         /   .  ";
+  else if (emotion_state === 'sad' || emotion_state === 'shy') brow = "  .   /         \\   .  ";
+  else if (emotion_state === 'thoughtful') brow = "  .---           ---.  ";
 
   let mouth = "|    {===========}    |";
   if (isSpeaking) {
@@ -85,8 +90,10 @@ export function renderFrame(state: State): string {
     mouth = frames[typingProgress % frames.length];
   } else if (emotion_state === 'attack' || emotion_state === 'angry') {
     mouth = (animation_phase % 2 === 0) ? "|    {VVVVVVVVVVV}    |" : "|    {^^^^^^^^^^^}    |";
-  } else if (emotion_state === 'happy') { mouth = "|    {  \\_______/  }    |"; }
-  else if (emotion_state === 'sad') { mouth = "|    {  /-------\\  }    |"; }
+  } else if (emotion_state === 'happy' || emotion_state === 'excited' || emotion_state === 'proud') { mouth = "|    {  \\_______/  }    |"; }
+  else if (emotion_state === 'sad' || emotion_state === 'scared') { mouth = "|    {  /-------\\  }    |"; }
+  else if (emotion_state === 'confused' || emotion_state === 'thoughtful') { mouth = "|    {    ---/     }    |"; }
+  else if (emotion_state === 'shy') { mouth = "|    {     ...     }    |"; }
 
   let nose = "|          ^          |";
   if (isProcessing && animation_phase % 2 === 0) nose = "|         (<*>)       |";
