@@ -385,14 +385,14 @@ export default function App() {
       onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
       onDragLeave={() => setIsDragging(false)}
       onDrop={handleDrop}
-      className={`min-h-screen bg-[#050505] flex flex-col items-center justify-center p-0 md:p-2 font-mono selection:bg-[#00FF00] selection:text-black relative overflow-hidden transition-colors duration-500 ${isDragging ? 'ring-2 ring-[#00FF00] ring-inset' : ''}`}
+      className={`min-h-screen bg-[#050505] flex flex-col items-center justify-center ${isFullscreen ? 'p-0' : 'p-0 md:p-2'} font-mono selection:bg-[#00FF00] selection:text-black relative overflow-hidden transition-all duration-500 ${isDragging ? 'ring-2 ring-[#00FF00] ring-inset' : ''}`}
     >
       {/* Subtle CRT Overlays */}
-      <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%]" />
+      <div className={`fixed inset-0 pointer-events-none z-50 opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%] ${isFullscreen ? 'mix-blend-screen opacity-[0.05]' : ''}`} />
       <div className="fixed inset-0 pointer-events-none z-40 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,0,0.02)_0%,transparent_80%)]" />
 
       {/* Auth UI */}
-      <div className="fixed top-4 right-4 z-[60] flex items-center gap-4">
+      <div className={`fixed top-4 right-4 z-[60] flex items-center gap-4 transition-opacity duration-300 ${isFullscreen ? 'opacity-0 hover:opacity-100' : ''}`}>
         {user && (
           <button 
             onClick={() => setIsRemoteMode(true)}
