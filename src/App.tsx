@@ -127,11 +127,12 @@ export default function App() {
       .replace(/\[FILE:\s*[^\]]+\][\s\S]*?\[\/FILE\]/gi, '')
       .replace(/\[STATE:\s*[^\]]+\]/gi, '')
       .replace(/\[INTENSITY:\s*[^\]]+\]/gi, '')
+      .replace(/\*.*?\*/g, '')
       .replace(/\s+/g, ' ')
       .trim();
 
     if (cleanResponse) {
-      socketRef.current?.emit('command', `speak ${response}`);
+      socketRef.current?.emit('command', `speak ${cleanResponse}`);
     }
   };
 
