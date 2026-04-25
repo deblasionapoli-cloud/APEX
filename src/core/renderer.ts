@@ -161,7 +161,7 @@ export function renderFrame(state: State): string {
 
   // 5. HUD Dynamic Text Rendering: Typewriter with [ Frame ]
   const displayedSpeech = state.full_speech || "";
-  const wrapWidth = 46; // Interior width for text
+  const wrapWidth = 58; // Increased interior width for text
   
   // Typewriter timing
   const charSpeed = 1.8 + (state.intensity / 40);
@@ -212,21 +212,21 @@ export function renderFrame(state: State): string {
     const visibleInLine = Math.max(0, visibleCharsThreshold - prevChars);
     
     if (visibleInLine <= 0) {
-      hudLinesRendered.push(`[ ${"".padEnd(wrapWidth)} ]`);
+      hudLinesRendered.push(`  | ${"".padEnd(wrapWidth)} |  `);
     } else if (visibleInLine < line.length) {
       const p = line.substring(0, visibleInLine);
       const gl = ["_", "█", "▒", "░"][Math.floor(animation_phase / 4) % 4];
-      hudLinesRendered.push(`[ ${(p + gl).padEnd(wrapWidth)} ]`);
+      hudLinesRendered.push(`  | ${(p + gl).padEnd(wrapWidth)} |  `);
     } else {
-      hudLinesRendered.push(`[ ${line.padEnd(wrapWidth)} ]`);
+      hudLinesRendered.push(`  | ${line.padEnd(wrapWidth)} |  `);
     }
   });
 
   while (hudLinesRendered.length < maxHudLines) {
-    hudLinesRendered.push(`[ ${"".padEnd(wrapWidth)} ]`);
+    hudLinesRendered.push(`  | ${"".padEnd(wrapWidth)} |  `);
   }
 
-  const hudLines = hudLinesRendered;
+  const hudLines = ["  .____________________________________________________________.  ", ...hudLinesRendered, "  '------------------------------------------------------------'  "];
 
   // 4. Composite: Foreground over Background
   const bgLines = new Array(bgHeight).fill("").map((_, idx) => generateBGLine(animation_phase, idx));
@@ -234,7 +234,7 @@ export function renderFrame(state: State): string {
   // Character sprite layout
   const maxLineLength = Math.max(...spriteLines.map(l => l.length));
   const charHOffset = Math.max(0, Math.floor((bgWidth - maxLineLength) / 2));
-  const charVOffset = Math.max(0, Math.floor((bgHeight - (spriteLines.length + maxHudLines + 1)) / 2) + totalYShift);
+  const charVOffset = Math.max(0, Math.floor((bgHeight - (spriteLines.length + hudLines.length + 1)) / 2) + totalYShift);
 
   const frame = bgLines.map((bg, idx) => {
     // 1. Overlay Character Sprite
@@ -254,7 +254,7 @@ export function renderFrame(state: State): string {
     }
 
     // 2. Overlay HUD (Bottom Interaction)
-    const hudRowStart = bgHeight - (maxHudLines + 1);
+    const hudRowStart = bgHeight - (hudLines.length + 1);
     const hudIdx = idx - hudRowStart;
     if (hudIdx >= 0 && hudIdx < hudLines.length) {
         const hudLine = hudLines[hudIdx];
