@@ -15,26 +15,22 @@ export function renderFrame(state: State): string {
   const { emotion_state, animation_phase, intensity, form } = state;
   const isGlitched = emotion_state === 'glitch';
 
-  // 1. Procedural Background Layer (Data Stream)
+  // 1. Procedural Background Layer (Optimized)
   const bgWidth = 110;
   const bgHeight = 32;
+  const chars = [" ", "·", " ", ".", " ", "'", "·", " ", " ", "·", ".", "`"];
   
-  // OPTIMIZATION: Use a simpler, faster noise generator instead of trig per pixel
-  // This reduces trig calls from ~1760 down to 0 per frame for noise
   const generateBGLine = (phase: number, row: number) => {
     let line = "";
     const halfWidth = bgWidth >> 1;
-    const rowOffset = row * 37 + phase;
-    const chars = [" ", "·", " ", ".", " ", "'", "·", " ", " ", "·", ".", "`"];
+    const rowOffset = (row * 37 + phase) & 1023;
     
     for (let i = 0; i < halfWidth; i++) {
-       // Fast pseudo-random hash
-       const hash = (rowOffset + (i * 13)) % 1024;
-       const val = (hash ^ (hash >> 3)) & 15;
-       const c = chars[val % chars.length];
+       const hash = (rowOffset + (i * 13)) & 1023;
+       const c = chars[hash % chars.length];
        line += c + c; 
     }
-    return line.length < bgWidth ? line.padEnd(bgWidth, " ") : line;
+    return line;
   };
 
   // 2. State & Timing (Pre-calculate shared values)

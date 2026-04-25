@@ -387,9 +387,7 @@ export default function App() {
       onDrop={handleDrop}
       className={`min-h-screen bg-[#050505] flex flex-col items-center justify-center ${isFullscreen ? 'p-0' : 'p-0 md:p-2'} font-mono selection:bg-[#00FF00] selection:text-black relative overflow-hidden transition-all duration-500 ${isDragging ? 'ring-2 ring-[#00FF00] ring-inset' : ''}`}
     >
-      {/* Subtle CRT Overlays */}
-      <div className={`fixed inset-0 pointer-events-none z-50 opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%] ${isFullscreen ? 'mix-blend-screen opacity-[0.05]' : ''}`} />
-      <div className="fixed inset-0 pointer-events-none z-40 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,0,0.02)_0%,transparent_80%)]" />
+      {/* Handcrafted performance mode: Overlays and glows disabled */}
 
       {/* Auth UI */}
       <div className={`fixed top-4 right-4 z-[60] flex items-center gap-4 transition-opacity duration-300 ${isFullscreen ? 'opacity-0 hover:opacity-100' : ''}`}>
@@ -425,23 +423,11 @@ export default function App() {
         <div 
           className="relative group/box flex-1 w-full flex items-center justify-center p-0"
         >
-          {/* Decorative Border Glow */}
-          <div 
-            className="absolute -inset-4 blur-3xl opacity-10 group-hover/box:opacity-20 transition-all duration-1000"
-            style={{ 
-              backgroundColor: state.emotion_state === 'attack' ? '#FF3300' : 
-                              state.color_mode === 'warm' ? '#FFCC00' :
-                              state.emotion_state === 'alert' ? '#FFCC00' : 
-                              state.emotion_state === 'curious' || state.emotion_state === 'sad' ? '#00FFFF' :
-                              state.emotion_state === 'surprised' ? '#FF00FF' :
-                              state.emotion_state === 'glitch' ? '#FFFFFF' :
-                              '#00FF00' 
-            }}
-          />
+          {/* Decorative artifacts removed for performance */}
           
           <div 
             ref={containerRef}
-            className={`relative flex flex-col items-center bg-transparent md:bg-black/80 border-none md:border md:border-white/5 rounded-none px-0 py-0 backdrop-blur-sm shadow-none transition-all duration-300 overflow-hidden ${isFullscreen ? 'fixed inset-0 w-screen h-screen z-40' : 'w-full h-full'}`}
+            className={`relative flex flex-col items-center transition-all duration-300 overflow-hidden ${isFullscreen ? 'fixed inset-0 w-screen h-screen z-40 bg-black border-none rounded-none' : 'w-full h-full bg-transparent md:bg-black/80 border-none md:border md:border-white/5 rounded-none px-0 py-0 backdrop-blur-sm shadow-none'}`}
           >
             {/* Fullscreen Toggle Button */}
             <button 
@@ -454,18 +440,11 @@ export default function App() {
  
           <pre 
             className={`${themeClass} text-[2.2vh] sm:text-[2.4vh] md:text-[2.8vh] leading-none tracking-tighter flex flex-col items-center justify-center select-none transition-all duration-200 overflow-hidden font-mono w-full h-full flex-1 relative`}
-            style={{
-              filter: 'contrast(1.05) brightness(1.02)',
-              textShadow: '0 0 5px rgba(255,255,255,0.05)'
-            }}
           >
             {(() => {
-              const now = Date.now();
-              const intensitySin = 0.96 + Math.sin(now * 0.005) * 0.02;
               const lines = frame.split('\n');
               
               return lines.map((line, i) => {
-                // Expanded HUD and context range for rows 26-33
                 const isHud = (i >= 26); 
                 const isSpecialRow = i >= 32;
                 
@@ -479,10 +458,7 @@ export default function App() {
                       className={`whitespace-pre inline-block transition-all duration-300 ${isHud ? 'font-bold opacity-100' : 'opacity-[0.85]'}`} 
                       style={{ 
                         transform: isHud ? 'scale(2.2, 1.7)' : 'scale(1.2, 1.1)', 
-                        transformOrigin: 'center',
-                        filter: isHud 
-                          ? `blur(0.2px) brightness(1.6) drop-shadow(0 0 2px rgba(255,255,255,0.25))` 
-                          : `blur(0.4px) drop-shadow(0 0 3px rgba(255,255,255,0.15)) brightness(${intensitySin})`
+                        transformOrigin: 'center'
                       }}
                     >
                       {line}
