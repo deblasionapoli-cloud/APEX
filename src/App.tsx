@@ -145,14 +145,12 @@ export default function App() {
       }
     }
 
-    // 3. Clean and Speak: Remove all tags and speak the residue
+    // 3. Clean and Speak: Remove only known system tags
     const cleanResponse = response
       .replace(/\[FILE:\s*[^\]]+\][\s\S]*?\[\/FILE\]/gi, '')
       .replace(/\[FORM:\s*[^\]]+\]/gi, '')
       .replace(/\[STATE:\s*[^\]]+\]/gi, '')
       .replace(/\[INTENSITY:\s*[^\]]+\]/gi, '')
-      .replace(/\[.*?\]/gi, '') // Final catch-all
-      .replace(/\*.*?\*/gi, '') // Strip asterisk descriptions
       .replace(/\s+/g, ' ')
       .trim();
 

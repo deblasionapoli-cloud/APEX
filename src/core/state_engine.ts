@@ -243,8 +243,6 @@ function processSpeechTags(state: State, rawSpeech: string) {
     .replace(/\[FORM:\s*[^\]]+\]/gi, '')
     .replace(/\[STATE:\s*[^\]]+\]/gi, '')
     .replace(/\[INTENSITY:\s*[^\]]+\]/gi, '')
-    .replace(/\[.*?\]/gi, '') // Final catch-all for any tag-like structures
-    .replace(/\*.*?\*/gi, '') // Strip asterisk descriptions like *EYE*
     .replace(/\s+/g, ' ')
     .trim()
     .toUpperCase();

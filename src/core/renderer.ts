@@ -18,7 +18,7 @@ export function renderFrame(state: State): string {
 
   // 1. Procedural Background Layer (Data Stream)
   const bgWidth = 72;
-  const bgHeight = 26;
+  const bgHeight = 30; // Increased height significantly for better readability
   const generateBGLine = (phase: number, row: number) => {
     const seed = (phase + row * 17) % 100;
     const chars = [" ", " ", " ", " ", ".", "·", "'", "`", " ", " "];
@@ -184,41 +184,39 @@ export function renderFrame(state: State): string {
   if (curL) lines.push(curL);
 
   // Buffer management: determine which window of lines to show
-  const maxHudLines = 5;
+  const maxHudLines = 7; // More lines for better visibility
   let hudLinesRendered: string[] = [];
-  let charsProcessed = 0;
   
-  // Find which line we are currently typing
-  let currentTypingLineIdx = 0;
-  for (let i = 0; i < lines.length; i++) {
-    if (visibleCharsThreshold < charsProcessed + lines[i].length) {
-      currentTypingLineIdx = i;
+  // Create cumulative character count per line to find cursor position
+  const lineEndIndices = lines.map((_, i) => 
+    lines.slice(0, i + 1).reduce((acc, l) => acc + (l.length + 1), 0)
+  );
+
+  // Find where the typewriter is currently working
+  let typingLineIdx = 0;
+  for (let i = 0; i < lineEndIndices.length; i++) {
+    if (visibleCharsThreshold < lineEndIndices[i]) {
+      typingLineIdx = i;
       break;
     }
-    charsProcessed += lines[i].length;
-    currentTypingLineIdx = i;
+    typingLineIdx = i;
   }
 
-  // Windowing: show a scrolling window of lines
-  const startLineIdx = Math.max(0, currentTypingLineIdx - (maxHudLines - 1));
-  const visibleLinesInWindow = lines.slice(startLineIdx, startLineIdx + maxHudLines);
+  // Windowing: follow the typingLineIdx, keeping it towards the bottom
+  const startIdx = Math.max(0, typingLineIdx - (maxHudLines - 2));
+  const windowLines = lines.slice(startIdx, startIdx + maxHudLines);
   
-  let windowCharsProcessed = 0;
-  // Recalculate processed chars up to startLineIdx for correct typewriter reveal in the window
-  let charsBeforeWindow = 0;
-  for(let i=0; i<startLineIdx; i++) charsBeforeWindow += lines[i].length;
-
-  visibleLinesInWindow.forEach((line, i) => {
-    const lineAbsoluteIdx = startLineIdx + i;
-    const charsProcessedBeforeThisLine = charsBeforeWindow + visibleLinesInWindow.slice(0, i).reduce((acc, l) => acc + l.length, 0);
-    const lineVisibleCount = Math.max(0, visibleCharsThreshold - charsProcessedBeforeThisLine);
+  windowLines.forEach((line, i) => {
+    const absIdx = startIdx + i;
+    const prevChars = absIdx === 0 ? 0 : lineEndIndices[absIdx - 1];
+    const visibleInLine = Math.max(0, visibleCharsThreshold - prevChars);
     
-    if (lineVisibleCount <= 0) {
+    if (visibleInLine <= 0) {
       hudLinesRendered.push(`[ ${"".padEnd(wrapWidth)} ]`);
-    } else if (lineVisibleCount < line.length) {
-      const partial = line.substring(0, lineVisibleCount);
-      const glitch = ["_", "█", "▒", "░"][Math.floor(animation_phase / 4) % 4];
-      hudLinesRendered.push(`[ ${ (partial + glitch).padEnd(wrapWidth) } ]`);
+    } else if (visibleInLine < line.length) {
+      const p = line.substring(0, visibleInLine);
+      const gl = ["_", "█", "▒", "░"][Math.floor(animation_phase / 4) % 4];
+      hudLinesRendered.push(`[ ${(p + gl).padEnd(wrapWidth)} ]`);
     } else {
       hudLinesRendered.push(`[ ${line.padEnd(wrapWidth)} ]`);
     }
