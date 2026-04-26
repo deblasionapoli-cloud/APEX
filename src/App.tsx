@@ -299,12 +299,28 @@ export default function App() {
       {/* Auth UI */}
       <div className={`fixed top-4 right-4 z-[60] flex items-center gap-4 transition-opacity duration-300 ${isFullscreen ? 'opacity-0 hover:opacity-100' : ''}`}>
         {user ? (
-          <button 
-            onClick={signOut}
-            className="text-[8px] uppercase tracking-widest text-white/30 hover:text-[#00FF00] transition-colors border border-white/10 px-2 py-1 rounded-sm"
-          >
-            LOGOUT_IDENTITY_{user.displayName?.split(' ')[0]}
-          </button>
+          <div className="flex flex-col items-end gap-1">
+            <button 
+              onClick={signOut}
+              className="text-[8px] uppercase tracking-widest text-white/30 hover:text-[#00FF00] transition-colors border border-white/10 px-2 py-1 rounded-sm"
+            >
+              LOGOUT_IDENTITY_{user.displayName?.split(' ')[0]}
+            </button>
+            <button 
+              onClick={async () => {
+                if(confirm("DEEP_WIPE? This will erase all personality traits and biography fragments.")) {
+                  setIsAiLoading(true);
+                  await clearAllMemories();
+                  setIsAiLoading(false);
+                  socketRef.current?.emit('command', 'calm');
+                  alert("Protocollo tabula rasa completato.");
+                }
+              }}
+              className="text-[6px] uppercase tracking-tighter text-red-500/30 hover:text-red-500 transition-colors"
+            >
+              [ WIPE_CONSCIOUSNESS ]
+            </button>
+          </div>
         ) : (
           <button 
             onClick={handleSignIn}

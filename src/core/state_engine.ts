@@ -19,9 +19,9 @@ export function updateState(currentState: State, events: Event[]): State {
   nextState.animation_phase = (nextState.animation_phase + 1) % 1000;
 
   // Initiative logic: disabled on server to allow client-side Llama/Gemini auth model
-  // if (nextState.animation_phase % 1200 === 0 && !nextState.is_thinking && nextState.speech_queue.length <= 5) {
-  //   handleInitiative(nextState);
-  // }
+  if (nextState.animation_phase % 1200 === 0 && !nextState.is_thinking && nextState.speech_queue.length <= 5) {
+    handleInitiative(nextState);
+  }
 
   // Slowly decay intensity
   if (nextState.intensity > 1) {
@@ -109,6 +109,11 @@ export function updateState(currentState: State, events: Event[]): State {
           const rawSpeech = event.payload.substring(6);
           processSpeechTags(nextState, rawSpeech);
           addLog(nextState, 'MSG: INCOMING_SPEECH');
+          break;
+        case 'initiative':
+          if (!nextState.is_thinking) {
+            handleInitiative(nextState);
+          }
           break;
       }
     } else {
@@ -278,6 +283,7 @@ function processSpeechTags(state: State, rawSpeech: string) {
     .replace(/\[FILE:\s*[^\]\s]+\]([\s\S]*?)(?:\[\/FILE\]|$)/gi, '')
     .replace(/\[STATE:\s*[^\]]+\]/gi, '')
     .replace(/\[INTENSITY:\s*[^\]]+\]/gi, '')
+    .replace(/\*.*?\*/g, '')
     .replace(/\s+/g, ' ')
     .trim()
     .toUpperCase();

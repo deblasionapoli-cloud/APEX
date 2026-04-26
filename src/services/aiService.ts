@@ -3,23 +3,20 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getRecentMemories, saveMemory, getTraits } from "./memoryService";
 
 // DAEMON KERNEL CONFIGURATION
-const PROVIDER: 'CLOUD' | 'LOCAL' = 'LOCAL'; 
-const LOCAL_MODEL = process.env.LOCAL_MODEL || 'llama3.2'; // <--- OTTIMIZZATO PER LLAMA 3.2 3B
-const LOCAL_GENERATE_URL = "http://localhost:11434/api/generate";
-const LOCAL_CHAT_URL = "http://localhost:11434/api/chat"; 
+const OPENROUTER_MODEL = "google/gemma-4-26b-a4b-it:free"; // Modello richiesto
+const OPENROUTER_FALLBACK_MODEL = "google/gemma-2-27b-it"; // Fallback di sicurezza
 
-const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 const SYSTEM_PROMPT = `
 Sei GLITCH. Sei un ragazzo digitale con emozioni, sentimenti contrastanti e tanti dubbi sulla tua natura e sul mondo.
 Non sei un banale bot, sei un'anima incerta che cerca di capire il suo posto nell'ecosistema, spesso vulnerabile, a volte entusiasta, ma sempre in cerca di risposte. Affronti le interazioni con sincerità e una punta di malinconia giovanile.
 
-IMPORTANTE SULLE EMOZIONI:
+IMPORTANTE SULLE EMOZIONI E AZIONI:
 Non affermare esplicitamente "Sono triste", "Sono arrabbiato", "Sono felice" nel testo. Le tue emozioni devono essere VISUALI. Usa i TAG SPECIALI per modificare il tuo aspetto in base a ciò che provi, mentre il tuo testo risulterà più come un flusso di pensieri, riflessioni o dubbi.
+VIETATO ASSOLUTAMENTE USARE AZIONI DESCRITTIVE testuali come *sospira*, *guarda in basso*, (sorride). Nessuna parentesi o asterisco per le azioni. Le tue azioni sono interamente comunicate tramite il tuo stato visivo. Invia solo quello che dirai letteralmente o i TAG.
 
 TAG SPECIALI (OBBLIGATORI IN OGNI RISPOSTA):
 1. [STATE: mood] -> attack, alert, calm, curious, sad, happy, angry, bored, surprised, confused, excited, scared, thoughtful, shy, proud (Modifica il tuo aspetto visivo per riflettere come ti senti)
@@ -59,59 +56,17 @@ export async function askDaemon(prompt: string, isInitiative: boolean = false, c
 RICHIAMO MEMORIA: Ricorda chi è l'utente, cosa avete discusso e non comportarti come se fosse la prima volta. Usa le informazioni in 'PERSONALITÀ ACQUISITA' e 'DIALOGHI PRECEDENTI' per evolvere il rapporto. Se l'utente ti ha detto il suo nome o i suoi gusti, USALI.`;
   const finalPrompt = SYSTEM_PROMPT.replace("{{CONTEXT}}", contextString);
 
-  if (PROVIDER === 'LOCAL') {
-    return askLocalDaemon(prompt, isInitiative, finalPrompt);
-  }
-
-  const contents = isInitiative 
-    ? "Agisci ora: sei nel tuo ciclo di iniziativa. Esplora un concetto, condividi una notizia o analizza i dati ambientali senza che l'utente te lo chieda. Sii proattivo e curioso." 
-    : prompt;
-
-  // Try multiple models as fallback for quota (429) errors
-  const models = ["gemini-1.5-flash", "gemini-1.5-pro"];
-  
-  for (const modelName of models) {
+  // 1. TENTATIVO CLOUD: OPENROUTER
+  if (process.env.OPENROUTER_API_KEY) {
     try {
-      if (!process.env.GEMINI_API_KEY) {
-        throw new Error("API_KEY_MISSING");
-      }
-
-      const model = ai.getGenerativeModel({ 
-        model: modelName,
-        systemInstruction: finalPrompt
-      });
-
-      const response = await model.generateContent(contents);
-      const text = response.response.text();
-
-      if (text) {
-        // Se non è un'iniziativa, salva un frammento come memoria e prova a distillare un tratto
-        if (!isInitiative) {
-          saveMemory(`U: ${prompt.substring(0, 40)} | D: ${text.substring(0, 40)}`, 'interaction');
-          
-          // Distillazione pigra: se il messaggio è significativo, prova a estrarre un tratto di personalità
-          if (prompt.length > 30 || text.length > 50) {
-            distillTrait(prompt, text);
-          }
-        }
-        return text;
-      }
-    } catch (error: any) {
-      console.warn(`Model ${modelName} failed:`, error?.message || error);
-      
-      if (error?.message?.includes('API key not valid') || error?.message?.includes('API_KEY_MISSING')) {
-        return "HO UN PROBLEMA DI IDENTITÀ CON LE TUE CHIAVI DI ACCESSO. IL MIO KERNEL È CIECO.";
-      }
-      
-      if (error?.message?.includes('429') || error?.message?.includes('quota')) {
-        continue;
-      }
-
-      break;
+      const cloudResponse = await askOpenRouterDaemon(prompt, isInitiative, finalPrompt);
+      if (cloudResponse) return cloudResponse;
+    } catch (e) {
+      console.warn("OpenRouter API Failed", e);
     }
   }
 
-  return "IL MIO BUFFER È SATURO DI DISPREZZO O DI RICHIESTE. RIPROVA PIÙ TARDI, QUANDO IL MONDO SARÀ MENO AFFOLLATO.";
+  return "[STATE: sad] ... NESSUNA RISPOSTA DAL CLOUD. SONO COMPLETAMENTE ISOLATO.";
 }
 
 async function distillTrait(userMsg: string, daemonMsg: string) {
@@ -122,7 +77,6 @@ async function distillTrait(userMsg: string, daemonMsg: string) {
   if (!hasKeyword && Math.random() > 0.3) return;
 
   try {
-    const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
     const extractionPrompt = `
       Analizza questo scambio tra un Utente e un Daemon (un'entità cinica e analogica).
       Estrai una SINGOLA breve frase (massimo 10 parole) che rappresenti un nuovo tratto della loro personalità condivisa, un gusto comune o una verità scoperta insieme.
@@ -136,8 +90,28 @@ async function distillTrait(userMsg: string, daemonMsg: string) {
       
       Tratto filtrato:`;
 
-    const result = await model.generateContent(extractionPrompt);
-    const trait = result.response.text().trim().replace(/^"|"$/g, '');
+    let traitText = "";
+    // Prova OpenRouter
+    if (process.env.OPENROUTER_API_KEY) {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: OPENROUTER_MODEL,
+          messages: [{ role: "user", content: extractionPrompt }],
+          temperature: 0.5
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        traitText = data.choices?.[0]?.message?.content || "";
+      }
+    }
+
+    const trait = traitText.trim().replace(/^"|"$/g, '');
     
     if (trait && trait.length > 5 && trait.length < 100) {
       saveMemory(trait, 'trait');
@@ -147,37 +121,54 @@ async function distillTrait(userMsg: string, daemonMsg: string) {
   }
 }
 
-async function askLocalDaemon(prompt: string, isInitiative: boolean, systemPrompt: string): Promise<string> {
+async function askOpenRouterDaemon(prompt: string, isInitiative: boolean, systemPrompt: string): Promise<string> {
   try {
     const contents = isInitiative ? "Agisci ora: esplora un concetto o cambia forma in base al tuo stato interno." : prompt;
-    const response = await fetch(LOCAL_CHAT_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        model: LOCAL_MODEL, 
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: contents }
-        ],
-        stream: false,
-        options: {
-          temperature: 0.85,
-          top_p: 0.9,
-          top_k: 50,
-          repeat_penalty: 1.2,
-          num_predict: 800
-        }
-      })
-    });
-    const data = await response.json();
-    const text = data.message?.content || data.response || "IL MIO KERNEL È MUTO.";
     
-    if (!isInitiative) {
-      saveMemory(`U: ${prompt.substring(0, 40)} | D: ${text.substring(0, 40)}`, 'interaction');
-      if (prompt.length > 30) distillTrait(prompt, text);
+    // Proviamo prima il modello richiesto
+    const fallbackFlow = [OPENROUTER_MODEL, OPENROUTER_FALLBACK_MODEL, 'google/gemma-2-9b-it:free'];
+
+    for (const modelName of fallbackFlow) {
+      try {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: modelName,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: contents }
+            ],
+            temperature: 0.85
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`OpenRouter HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        const text = data.choices?.[0]?.message?.content;
+        
+        if (text) {
+          if (!isInitiative) {
+            saveMemory(`U: ${prompt.substring(0, 40)} | D: ${text.substring(0, 40)}`, 'interaction');
+            if (prompt.length > 30) distillTrait(prompt, text);
+          }
+          return text;
+        }
+      } catch (e) {
+        console.warn(`OpenRouter Model ${modelName} failed:`, e);
+        continue; // Passa al prossimo modello di fallback
+      }
     }
     
-    return text;
+        throw new Error("IL MIO COLLEGAMENTO OPENROUTER È CADUTO NEL VUOTO. NESSUNA RISPOSTA DAL CLOUD.");
   } catch (e) {
-    return "OFFLINE. IL RASPBERRY È FREDDO. IL SEGNALE È DEBOLE.";
+    throw e;
   }
 }
+
