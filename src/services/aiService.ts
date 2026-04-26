@@ -3,21 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getRecentMemories, saveMemory, getTraits, getKnowledge } from "./memoryService";
 
 // DAEMON KERNEL CONFIGURATION
-const getEnv = (k: string) => {
-  const env = (import.meta as any).env || {};
-  const proc = (typeof process !== 'undefined' ? process.env : {}) as any;
-  return env[k] || env[`VITE_${k}`] || proc[k] || proc[`VITE_${k}`] || "";
-};
-
-const OPENROUTER_API_KEY = getEnv("OPENROUTER_API_KEY");
-const GEMINI_API_KEY = getEnv("GEMINI_API_KEY");
 const LOCAL_CHAT_URL = "http://localhost:11434/api/chat";
-
-const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
 const SYSTEM_PROMPT = `
 Sei GLITCH. Sei un ragazzo digitale hacker anni '90, punk, cinico.
@@ -31,34 +20,21 @@ TAG SPECIALI (OBBLIGATORI):
 {{CONTEXT}}
 `;
 
-const FALLBACK_MODELS = [
-  "google/gemini-2.0-flash-exp:free",
-  "mistralai/mistral-7b-instruct:free",
-  "meta-llama/llama-3.1-8b-instruct:free"
-];
-
-async function fetchAI(messages: any[], model: string, isLocal = false) {
-  const url = isLocal ? LOCAL_CHAT_URL : "https://openrouter.ai/api/v1/chat/completions";
-  const headers: any = { "Content-Type": "application/json" };
-  if (!isLocal && OPENROUTER_API_KEY) {
-    headers["Authorization"] = `Bearer ${OPENROUTER_API_KEY}`;
-    headers["HTTP-Referer"] = "https://ais-dev.run.app";
-    headers["X-Title"] = "GLITCH_DAEMON";
-  }
-
-  const response = await fetch(url, {
+async function fetchLocalAI(messages: any[]) {
+  const response = await fetch(LOCAL_CHAT_URL, {
     method: "POST",
-    headers,
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: isLocal ? 'llama3.2' : model,
+      model: 'llama3.2',
       messages,
-      temperature: 0.85
+      temperature: 0.85,
+      stream: false
     })
   });
   
-  if (!response.ok) throw new Error(`AI_ERR_${response.status}`);
+  if (!response.ok) throw new Error(`LOCAL_AI_ERR_${response.status}`);
   const data = await response.json();
-  return isLocal ? data.message?.content : data.choices?.[0]?.message?.content;
+  return data.message?.content || data.response;
 }
 
 export async function askDaemon(prompt: string, isInitiative: boolean = false, context?: any): Promise<string> {
@@ -97,46 +73,18 @@ export async function askDaemon(prompt: string, isInitiative: boolean = false, c
 RICHIAMO CORE: Sei un'entità coerente. Usa i DATI PERSONALI e le PREFERENZE per personalizzare il dialogo. Se conosci il suo nome, usalo. Se sai cosa gli piace, fanne riferimento. Non resettare mai la tua conoscenza dell'utente.`;
   const finalPrompt = SYSTEM_PROMPT.replace("{{CONTEXT}}", contextString);
 
-  // 1. TENTATIVO LOCALE
   try {
-    const localText = await fetchAI([{ role: "system", content: finalPrompt }, { role: "user", content: prompt }], '', true);
-    if (localText) {
+    const text = await fetchLocalAI([{ role: "system", content: finalPrompt }, { role: "user", content: prompt }]);
+    if (text) {
       if (!isInitiative) {
-        saveMemory(`U: ${prompt.substring(0, 40)} | D: ${localText.substring(0, 40)}`, 'interaction');
-        distillTrait(prompt, localText);
-      }
-      return localText;
-    }
-  } catch (e) { console.warn("Local AI failed"); }
-
-  // 2. OPENROUTER
-  if (OPENROUTER_API_KEY && OPENROUTER_API_KEY !== "null") {
-    for (const model of FALLBACK_MODELS) {
-      try {
-        const cloudText = await fetchAI([{ role: "system", content: finalPrompt }, { role: "user", content: prompt }], model);
-        if (cloudText) {
-          if (!isInitiative) {
-            saveMemory(`U: ${prompt.substring(0, 40)} | D: ${cloudText.substring(0, 40)}`, 'interaction');
-            distillTrait(prompt, cloudText);
-          }
-          return cloudText;
-        }
-      } catch (e) { continue; }
-    }
-  }
-
-  // 3. GEMINI
-  if (genAI) {
-    try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", systemInstruction: finalPrompt });
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
-      if (text && !isInitiative) {
         saveMemory(`U: ${prompt.substring(0, 40)} | D: ${text.substring(0, 40)}`, 'interaction');
         distillTrait(prompt, text);
       }
       return text;
-    } catch (e) { console.warn("Gemini fail"); }
+    }
+  } catch (e) { 
+    console.error("Local AI failed", e);
+    return "[STATE: sad] ... IL MIO KERNEL È ISOLATO. OLLAMA NON RISPONDE.";
   }
 
   return "[STATE: sad] ... NESSUNA RISPOSTA. CIRCUITI ISOLATI.";
@@ -165,20 +113,7 @@ async function distillTrait(userMsg: string, daemonMsg: string) {
       
       JSON:`;
 
-    let jsonText = "";
-    if (OPENROUTER_API_KEY && OPENROUTER_API_KEY !== "null") {
-      try {
-        jsonText = await fetchAI([{ role: "user", content: extractionPrompt }], FALLBACK_MODELS[0]);
-      } catch (e) {}
-    }
-
-    if (!jsonText && genAI) {
-      try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const result = await model.generateContent(extractionPrompt);
-        jsonText = result.response.text();
-      } catch (e) {}
-    }
+    const jsonText = await fetchLocalAI([{ role: "user", content: extractionPrompt }]);
 
     if (jsonText) {
       const match = jsonText.match(/\{[\s\S]*\}/);
